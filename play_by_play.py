@@ -67,6 +67,9 @@ text_box = pygame.Rect(field_x, field_y + field_height, field_width, round(0.5*f
 env_box = pygame.Rect(field_x + field_width/4, field_y - (3*spacer_unit_small), field_width/2, (3*spacer_unit_small))
 coach_box = pygame.Rect(field_x, field_y + field_height + text_box.height, field_width, (HEIGHT - text_box.bottom)/2)
 
+win_chart = pygame.Rect(text_box.centerx - text_box.width/4, text_box.top + spacer_unit, (text_box.width/4) - spacer_unit_small, spacer_unit)
+epa_chart = pygame.Rect(text_box.centerx - text_box.width/4, win_chart.bottom + 2*spacer_unit_small, (text_box.width/4) - spacer_unit_small, spacer_unit)
+
 font = pygame.font.SysFont(r"arial", round(1.2*font_size), True, False)
 font2 = pygame.font.SysFont(r"arial", round(1.2*font_size), True, True)
 font3 = pygame.font.SysFont(r"arial", 2*font_size)
@@ -582,7 +585,8 @@ def main():
     stadium = str(df['stadium'][1])
     weather = str(df['weather'][1])
     roof = str(df['roof'][1])
-
+    season = int(df['season'][0])
+    surface = str(df['surface'][0])
     while run:
         clock.tick(FPS)
         
@@ -629,17 +633,30 @@ def main():
         announcer_text = str(df['desc'][play])
         game_time = str(df['time'][play])
         quarter = str(df['qtr'][play])
-        o_form = str(df['offense_formation'][play])
-        o_pers = str(df['offense_personnel'][play])
-        d_pers = str(df['defense_personnel'][play])
-        d_box = str(df['defenders_in_box'][play])
         
-        pass_rushers = str(df['number_of_pass_rushers'][play])
-        time_tt = str(df['time_to_throw'][play])
-        was_press = df['was_pressure'][play]
-        route = str(df['route'][play])
-        man_zone = str(df['defense_man_zone_type'][play])
-        cover = str(df['defense_coverage_type'][play])
+        home_wp = df['home_wp'][play]
+        #away_wp = df['away_wp'][play]   
+        vegas_home_wp = df['vegas_home_wp'][play]
+        epa_limit = max(abs(df['total_home_epa'].max()), abs(df['total_home_epa'].min()))
+        home_epa = round(df['total_home_epa'][play], 2)
+        away_epa = round(df['total_away_epa'][play], 2)
+        home_epa_norm = df['total_home_epa'][play]/epa_limit
+        away_epa_norm = df['total_away_epa'][play]/epa_limit
+
+        # 2024 Dep
+        if season != 2024:
+            o_form = str(df['offense_formation'][play])
+            o_pers = str(df['offense_personnel'][play])
+            d_pers = str(df['defense_personnel'][play])
+            d_box = str(df['defenders_in_box'][play])
+            
+            pass_rushers = str(df['number_of_pass_rushers'][play])
+            time_tt = str(df['time_to_throw'][play])
+            was_press = df['was_pressure'][play]
+            route = str(df['route'][play])
+            man_zone = str(df['defense_man_zone_type'][play])
+            cover = str(df['defense_coverage_type'][play])
+
         ###################################################################### Define Play *
         if play_type == 'RUSH':
             run_location = str(df['run_location'][play])
@@ -751,7 +768,7 @@ def main():
         weather_text = font.render("Weather: " + weather, 1, BLACK)
         stadium_text = font.render("Stadium: " + stadium, 1, BLACK)
         roof_text = font.render(roof, 1, BLACK)
-        
+        surface_text = font.render(surface, 1, BLACK)
         home_team_text = font.render(home_team, 1, BLACK)
         away_team_text = font.render(away_team, 1, BLACK)
         home_coach_text = font.render(f"{home_team} Coach: " + home_coach, 1, BLACK)
@@ -781,22 +798,22 @@ def main():
             text_yacatch = font2.render("YAC: " + yacatch, 1, GREY)
             text_pass_loc = font.render("Pass Location: " + pass_loc, 1, GREY)
             text_passer = font2.render("Passer: " + passer, 1, GREY)
-            text_pass_rushers = font.render("Pass Rushers: " + pass_rushers, 1, RED)
-            text_time_tt = font.render("Time to throw: " + time_tt + " sec", 1, PURPLE)
-            text_route = font.render("Route: " + route, 1, PURPLE)
-            text_man_zone = font.render(man_zone, 1, RED)
-            text_cover = font.render(cover, 1, RED)
-            
-            WIN.blit(text_man_zone, (pos_yard_line.left - (2*spacer_unit) + spacer_unit_small, pos_yard_line.centery + 5*spacer_unit_small))
-            WIN.blit(text_cover, (pos_yard_line.left - (2*spacer_unit) + spacer_unit_small, pos_yard_line.centery + 7*spacer_unit_small))
-            WIN.blit(text_time_tt, (pos_yard_line.right + (2*spacer_unit_small), pos_yard_line.centery + 5*spacer_unit_small))
-            WIN.blit(text_pass_rushers, (pos_yard_line.left - (2*spacer_unit) + spacer_unit_small, pos_yard_line.centery + 3*spacer_unit_small))
             WIN.blit(text_receiver, (text_box.left + spacer_unit_small, text_box.bottom - spacer_unit))
             WIN.blit(text_passer, (text_box.centerx - 3*(text_box.centerx - text_box.left)/4, text_box.bottom - spacer_unit))
             WIN.blit(text_yacatch, (text_box.centerx - (text_box.centerx - text_box.left)/4, text_box.bottom - spacer_unit))
             WIN.blit(text_air_yards, (text_box.centerx - (text_box.centerx - text_box.left)/2, text_box.bottom - spacer_unit))
             WIN.blit(text_pass_loc, (text_box.centerx, text_box.bottom - spacer_unit))
-            
+            # 2024 Dep
+            if season != 2024:
+                text_pass_rushers = font.render("Pass Rushers: " + pass_rushers, 1, RED)
+                text_time_tt = font.render("Time to throw: " + time_tt + " sec", 1, PURPLE)
+                text_route = font.render("Route: " + route, 1, PURPLE)
+                text_man_zone = font.render(man_zone, 1, RED)
+                text_cover = font.render(cover, 1, RED)
+                WIN.blit(text_man_zone, (pos_yard_line.left - (2*spacer_unit) + spacer_unit_small, pos_yard_line.centery + 5*spacer_unit_small))
+                WIN.blit(text_cover, (pos_yard_line.left - (2*spacer_unit) + spacer_unit_small, pos_yard_line.centery + 7*spacer_unit_small))
+                WIN.blit(text_time_tt, (pos_yard_line.right + (2*spacer_unit_small), pos_yard_line.centery + 5*spacer_unit_small))
+                WIN.blit(text_pass_rushers, (pos_yard_line.left - (2*spacer_unit) + spacer_unit_small, pos_yard_line.centery + 3*spacer_unit_small))
             if pass_complete > 0:
                 text_pass_completion = font2.render("Pass Completed", 1, DARK_GREEN)
             else:
@@ -804,12 +821,14 @@ def main():
             WIN.blit(text_pass_completion, (text_box.centerx + (text_box.centerx - text_box.left)/4, text_box.bottom - spacer_unit))
             if qb_hit > 0:
                 text_qb_hit = font2.render("QB Hit", 1, DARK_RED)
-                WIN.blit(text_qb_hit, (text_box.left + spacer_unit_small, text_box.bottom - (spacer_unit/2)))
-            if was_press > 0:
-                text_was_press = font.render("QB Pressured", 1, PURPLE)
-            else:
-                text_was_press = font.render("No QB Pressure", 1, PURPLE)
-            WIN.blit(text_was_press, (pos_yard_line.right + (2*spacer_unit_small), pos_yard_line.centery + 3*spacer_unit_small))
+                WIN.blit(text_qb_hit, (text_box.left + spacer_unit_small, text_box.bottom - (spacer_unit/2)))                
+            # 2024 Dep
+            if season != 2024:
+                if was_press > 0:
+                    text_was_press = font.render("QB Pressured", 1, PURPLE)
+                else:
+                    text_was_press = font.render("No QB Pressure", 1, PURPLE)
+                WIN.blit(text_was_press, (pos_yard_line.right + (2*spacer_unit_small), pos_yard_line.centery + 3*spacer_unit_small))
 
         if reception:
             if pass_loc == 'left':
@@ -820,7 +839,9 @@ def main():
 
             if pass_loc == 'right':
                 pass_loc_ind = (pos_yard_line.centerx - int((yard*df['air_yards'][play])) - int(spacer_unit/2), pos_yard_line.centery - (pos_yard_line.height/3))
-            WIN.blit(text_route, (pass_loc_ind[0], pass_loc_ind[1] - (2*spacer_unit_small)))
+            # 2024 Dep
+            if season != 2024:
+                WIN.blit(text_route, (pass_loc_ind[0], pass_loc_ind[1] - (2*spacer_unit_small)))
             if pass_complete == 0:
                 WIN.blit(x_pic, pass_loc_ind)
             
@@ -855,14 +876,15 @@ def main():
             text_td_prob = font.render("Touchdown Probability: " + td_prob, 1, GREY)
             WIN.blit(text_td_prob, (text_box.centerx - text_box.width/4, text_box.top + spacer_unit_small))
         if reception or rush:
-            text_o_form = font.render(o_form, 1, PURPLE)
-            text_o_pers = font.render(o_pers, 1, PURPLE)
-            text_d_pers = font.render(d_pers, 1, RED)
-            text_d_box = font.render(d_box + " in box", 1, RED)
-            WIN.blit(text_o_form, (pos_yard_line.right + (2*spacer_unit_small), pos_yard_line.centery - spacer_unit_small))
-            WIN.blit(text_o_pers, (pos_yard_line.right + (2*spacer_unit_small), pos_yard_line.centery + spacer_unit_small))
-            WIN.blit(text_d_box, (pos_yard_line.left - (2*spacer_unit) + spacer_unit_small, pos_yard_line.centery - spacer_unit_small))
-            WIN.blit(text_d_pers, (pos_yard_line.left - (2*spacer_unit) + spacer_unit_small, pos_yard_line.centery + spacer_unit_small))
+            if season != 2024:
+                text_o_form = font.render(o_form, 1, PURPLE)
+                text_o_pers = font.render(o_pers, 1, PURPLE)
+                text_d_pers = font.render(d_pers, 1, RED)
+                text_d_box = font.render(d_box + " in box", 1, RED)
+                WIN.blit(text_o_form, (pos_yard_line.right + (2*spacer_unit_small), pos_yard_line.centery - spacer_unit_small))
+                WIN.blit(text_o_pers, (pos_yard_line.right + (2*spacer_unit_small), pos_yard_line.centery + spacer_unit_small))
+                WIN.blit(text_d_box, (pos_yard_line.left - (2*spacer_unit) + spacer_unit_small, pos_yard_line.centery - spacer_unit_small))
+                WIN.blit(text_d_pers, (pos_yard_line.left - (2*spacer_unit) + spacer_unit_small, pos_yard_line.centery + spacer_unit_small))
         if qb_scramble > 0:
             text_qb_scramble = font.render("QB Scramble", 1, BLUE)
             WIN.blit(text_qb_scramble, (pos_yard_line.right + (7*spacer_unit_small), pos_yard_line.centery + spacer_unit))
@@ -875,7 +897,41 @@ def main():
         quarter_text = font3.render("QTR: " + quarter, 1, BLACK)
         WIN.blit(quarter_text, (text_box.centerx, text_box.top + spacer_unit_small))
         WIN.blit(time_text, (text_box.centerx + int(text_box.width/6), text_box.top + spacer_unit_small))
+        ###################################################################### Graphs
+
+        pygame.draw.rect(WIN, GREY, win_chart)
+        pygame.draw.rect(WIN, DARK_GREEN, (win_chart.left + round(home_wp*win_chart.width), win_chart.top, spacer_unit_small, win_chart.height/2))
+        pygame.draw.rect(WIN, LIGHT_BLUE, (win_chart.left + round(vegas_home_wp*win_chart.width), win_chart.centery, spacer_unit_small, win_chart.height/2))
+        win_chart_text = font2.render("Win Probability", 1, DARK_GREEN)
+        veg_win_chart_text = font2.render("Win Probability Vegas", 1, LIGHT_BLUE)
+        win_ht_text = font2.render(home_team, 1, BLACK)
+        win_at_text = font2.render(away_team, 1, BLACK)
+        WIN.blit(win_ht_text, (win_chart.right - win_ht_text.get_width() - spacer_unit_small, win_chart.centery - (win_ht_text.get_height()/2)))
+        WIN.blit(win_at_text, (win_chart.left + spacer_unit_small, win_chart.centery - (win_at_text.get_height()/2)))
+        WIN.blit(win_chart_text, ( win_chart.left, win_chart.top - 2*font_size))
+        WIN.blit(veg_win_chart_text, ( win_chart.left + win_chart_text.get_width() + spacer_unit_small, win_chart.top - 2*font_size))
         
+        if play_type not in ['END_QUARTER', 'END_GAME']:
+            pygame.draw.rect(WIN, GREY, epa_chart)
+            epa_width = int(abs((home_epa_norm*(epa_chart.width/2)) - spacer_unit_small))
+            if home_epa_norm > away_epa_norm:
+                home_epa_color = DARK_GREEN
+                home_epa_x = epa_chart.centerx
+                away_epa_color = DARK_RED
+                away_epa_x = epa_chart.centerx - epa_width
+
+            else:
+                home_epa_color = DARK_RED
+                home_epa_x = epa_chart.centerx - epa_width
+                away_epa_color = DARK_GREEN
+                away_epa_x  = epa_chart.centerx
+            pygame.draw.rect(WIN, home_epa_color, (home_epa_x, epa_chart.top, epa_width, epa_chart.height/2))
+            pygame.draw.rect(WIN, away_epa_color, (away_epa_x, epa_chart.centery, epa_width, epa_chart.height/2))
+            text_home_epa = font2.render(home_team + " Expected Points Added: " + str(home_epa), 1, WHITE)
+            text_away_epa = font2.render(away_team + " Expected Points Added: " + str(away_epa), 1, WHITE)
+            WIN.blit(text_home_epa, (epa_chart.left + spacer_unit_small, epa_chart.top + (spacer_unit_small/2)))
+            WIN.blit(text_away_epa, (epa_chart.left + spacer_unit_small, epa_chart.centery + (spacer_unit_small/2)))
+            
         ###################################################################### Blit Text Static
         
         WIN.blit(text1, (text_box.left + spacer_unit_small, text_box.top + spacer_unit_small))
@@ -891,6 +947,7 @@ def main():
         WIN.blit(weather_text, (env_box.left + spacer_unit_small, env_box.top + (1.7*spacer_unit_small)))
         WIN.blit(stadium_text, (env_box.left + spacer_unit_small, env_box.top + (0.3*spacer_unit_small)))
         WIN.blit(roof_text, (env_box.centerx + int(env_box.width/4), env_box.top + (0.3*spacer_unit_small)))
+        WIN.blit(surface_text, (env_box.centerx + int(3*(env_box.width/8)), env_box.top + (0.3*spacer_unit_small)))
         WIN.blit(home_team_text, (coach_box.left + spacer_unit_small, coach_box.top + spacer_unit_small))
         WIN.blit(away_team_text, (coach_box.centerx + spacer_unit_small, coach_box.top + spacer_unit_small))
         WIN.blit(home_coach_text, (coach_box.left + spacer_unit_small, coach_box.centery))
