@@ -5,11 +5,15 @@ Created on Thu Jan 16 22:26:10 2025
 @author: nick_
 """
 import pygame
-import pandas as pd
-import nfl_data_py as nfl
 import math
 import sys
 import os
+from warnings import warn
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import numpy
+import pandas
+import appdirs
+from urllib.error import HTTPError
 
 pygame.init()
 
@@ -31,6 +35,8 @@ TURQUOISE = (64, 224, 208)
 GREY = (128, 128, 128)
 DARK_GREEN = (0, 100, 0)
 DARK_RED = (100, 0, 0)
+SLATE_GREY = (47,79,79)
+LIGHT_BLUE = (0, 191, 255)
 
 field_ratio = 0.444
 FPS = 300
@@ -61,18 +67,28 @@ text_box = pygame.Rect(field_x, field_y + field_height, field_width, round(0.5*f
 env_box = pygame.Rect(field_x + field_width/4, field_y - (3*spacer_unit_small), field_width/2, (3*spacer_unit_small))
 coach_box = pygame.Rect(field_x, field_y + field_height + text_box.height, field_width, (HEIGHT - text_box.bottom)/2)
 
-x_pic = pygame.image.load(r"pics\x.png")
-check_pic = pygame.image.load(r"pics\check.png")
-
-x_pic = pygame.transform.scale(x_pic, (spacer_unit, spacer_unit))
-check_pic = pygame.transform.scale(check_pic, (spacer_unit, spacer_unit))
-
 font = pygame.font.SysFont(r"arial", round(1.2*font_size), True, False)
 font2 = pygame.font.SysFont(r"arial", round(1.2*font_size), True, True)
 font3 = pygame.font.SysFont(r"arial", 2*font_size)
 
 season_options = list(range(2000, 2025))
 team_options =  ('WAS', 'TEN', 'TB', 'SF', 'SEA', 'PIT', 'PHI', 'NYJ', 'NYG', 'NO', 'NE', 'MIN', 'MIA', 'LV', 'LAC', 'LA', 'KC', 'JAX', 'IND', 'HOU', 'GB', 'DET', 'DEN', 'DAL', 'CLE', 'CIN', 'CHI', 'CAR', 'BUF', 'BAL', 'ATL', 'ARI')
+#cache_path = r"C:\Users\nick_\OneDrive\Desktop\Python\Projects\Fantasy\replay_test\cache"
+
+if getattr(sys, 'frozen', False):
+    # Executable is running in PyInstaller bundle
+    current_file_path = sys._MEIPASS
+else:
+    # Executable is running in normal Python environment
+    current_file_path = os.path.dirname(os.path.abspath(__file__))
+
+cache_path_g = os.path.dirname(current_file_path) + r"\cache"
+
+x_pic = pygame.image.load(r"pics\x.png")
+check_pic = pygame.image.load(r"pics\check.png")
+
+x_pic = pygame.transform.scale(x_pic, (spacer_unit, spacer_unit))
+check_pic = pygame.transform.scale(check_pic, (spacer_unit, spacer_unit))
 
 class Yard_Lines:
     def __init__(self, field):
@@ -84,34 +100,310 @@ class Yard_Lines:
         for i in range(0, 11):
             self.lines.append(pygame.Rect((self.position[0] + i*(yard*spacer_unit_small)), self.position[1], yard, self.height))
 
-
+class game_text:
+    def __init__(self, surf_x, surf_y, surf_width, surf_height):
+        self.surf_x = surf_x
+        self.surf_y = surf_y
+        self.x = surf_x + spacer_unit_small
+        self.y = surf_y + spacer_unit_small
+        self.surf_width = surf_width
+        self.surf_height = surf_height
+        self.text = ''
+    def write(self, text):
+        self.text = text
+        
+    def draw(self, win):
+        title_text = font2.render(r"Play by Play", 1, BLACK)
+        win.blit(title_text, (self.x, self.y - int(spacer_unit/2)))
+        if len(self.text) > 0:
+            raw_text = font.render(self.text, 1, WHITE)
+            measure_stick = pygame.Rect(self.surf_x, self.surf_y, self.surf_width, self.surf_height)
+            pygame.draw.rect(win, SLATE_GREY, measure_stick)
+            if raw_text.get_width() < self.surf_width - spacer_unit_small:
+                win.blit(raw_text, (self.x, self.y))
+            else:
+                words = self.text.split(' ')
+                overflow = []
+                for i in range(len(words)):
+                    overflow.append(words[-1])
+                    words.pop()
+                    line1 = " ".join(words)
+                    raw_text1 = font.render(line1, 1, WHITE)
+                    if raw_text1.get_width() < self.surf_width - spacer_unit_small:
+                        overflow.reverse()
+                        line2 = " ".join(overflow)
+                        break
+                raw_text2 = font.render(line2, 1, WHITE)
+                win.blit(raw_text1, (self.x, self.y))
+                if raw_text2.get_width() < self.surf_width - spacer_unit_small:
+                    win.blit(raw_text2, (self.x, self.y + spacer_unit_small + 10))
+                else:
+                    words = overflow
+                    overflow = []
+                    for i in range(len(words)):
+                        overflow.append(words[-1])
+                        words.pop()
+                        line1 = " ".join(words)
+                        raw_text2 = font.render(line1, 1, WHITE)
+                        if raw_text2.get_width() < self.surf_width - spacer_unit_small:
+                            overflow.reverse()
+                            line3 = " ".join(overflow)
+                            break
+                    raw_text3 = font.render(line3, 1, WHITE)
+                    win.blit(raw_text2, (self.x, self.y + spacer_unit_small + 10))
+                    if raw_text3.get_width() < self.surf_width - spacer_unit_small:
+                        win.blit(raw_text3, (self.x, self.y + 2*(spacer_unit_small + 10)))
+                    else:
+                        words = overflow
+                        overflow = []
+                        for i in range(len(words)):
+                            overflow.append(words[-1])
+                            words.pop()
+                            line1 = " ".join(words)
+                            raw_text3 = font.render(line1, 1, WHITE)
+                            if raw_text3.get_width() < self.surf_width - spacer_unit_small:
+                                overflow.reverse()
+                                line4 = " ".join(overflow)
+                                break
+                        raw_text4 = font.render(line4, 1, WHITE)
+                        win.blit(raw_text3, (self.x, self.y + 2*(spacer_unit_small + 10)))
+                        if raw_text4.get_width() < self.surf_width - spacer_unit_small:
+                            win.blit(raw_text4, (self.x, self.y + 3*(spacer_unit_small + 10)))
+            
 ############################################################################## Football data
+def import_pbp_data(
+        years, 
+        columns=None, 
+        include_participation=True, 
+        downcast=True, 
+        cache=False, 
+        alt_path=None,
+        thread_requests=False
+    ):
+    """Imports play-by-play data
+    
+    Args:
+        years (List[int]): years to get PBP data for
+        columns (List[str]): only return these columns
+        include_participation (bool): whether to include participation stats or not
+        downcast (bool): convert float64 to float32, default True
+        cache (bool): whether to use local cache as source of pbp data
+        alt_path (str): path for cache if not nfl_data_py default
+    Returns:
+        DataFrame
+    """
+    
+    # check variable types
+    if not isinstance(years, (list, range)):
+        raise ValueError('Input must be list or range.')
+        
+    if min(years) < 1999:
+        raise ValueError('Data not available before 1999.')
+    
+    if not columns:
+        columns = []
+
+    columns = [x for x in columns if x not in ['season']]
+    
+    if all([include_participation, len(columns) != 0]):
+        columns = columns + [x for x in ['play_id','old_game_id'] if x not in columns]
+       
+    # potential sources for pbp data
+    url1 = r'https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_'
+    url2 = r'.parquet'
+    appname = 'nfl_data_py'
+    appauthor = 'cooper_dff'
+    pbp_data = []
+    
+    if cache:
+        if not alt_path:
+            dpath = os.path.join(appdirs.user_cache_dir(appname, appauthor), 'pbp')
+        else:
+            dpath = alt_path
+
+    if thread_requests and not cache:
+        with ThreadPoolExecutor() as executor:
+            # Create a list of the same size as years, initialized with None
+            pbp_data = [None]*len(years)
+            # Create a mapping of futures to their corresponding index in the pbp_data
+            futures_map = {
+                executor.submit(
+                    pandas.read_parquet,
+                    path=url1 + str(year) + url2,
+                    columns=columns if columns else None, 
+                    engine='auto'
+                ): idx 
+                for idx, year in enumerate(years)
+            }
+            for future in as_completed(futures_map):
+                pbp_data[futures_map[future]] = future.result()
+    else:
+        # read in pbp data
+        for year in years:
+            if cache:
+                seasonStr = f'season={year}'
+                if not os.path.isdir(os.path.join(dpath, seasonStr)):
+                    print(dpath)
+                    raise ValueError(f'{year} cache file does not exist.')
+                for fname in filter(lambda x: seasonStr in x, os.listdir(dpath)):
+                    folder = os.path.join(dpath, fname)
+                    print(dpath)
+                    for file in os.listdir(folder):
+                        if file.endswith(".parquet"):
+                            fpath = os.path.join(folder, file)
+                
+            # define path based on cache and alt_path variables
+                path = fpath
+            else:
+                path = url1 + str(year) + url2
+
+            # load data
+            try:
+
+                data = pandas.read_parquet(path, columns=columns if columns else None)
+
+
+                raw = pandas.DataFrame(data)
+                raw['season'] = year
+                
+
+                if include_participation and not cache:
+                    path = r'https://github.com/nflverse/nflverse-data/releases/download/pbp_participation/pbp_participation_{}.parquet'.format(year)
+
+                    try:
+                        partic = pandas.read_parquet(path)
+                        raw = raw.merge(
+                            partic,
+                            how='left',
+                            left_on=['play_id','game_id'],
+                            right_on=['play_id','nflverse_game_id']
+                        )
+                    except HTTPError:
+                        pass
+                
+                pbp_data.append(raw)
+                print(str(year) + ' done.')
+
+            except Exception as e:
+                print(e)
+                print('Data not available for ' + str(year))
+    
+    if not pbp_data:
+        return pandas.DataFrame()
+    
+    plays = pandas.concat(pbp_data, ignore_index=True)
+
+    # converts float64 to float32, saves ~30% memory
+    if downcast:
+        print('Downcasting floats.')
+        cols = plays.select_dtypes(include=[numpy.float64]).columns
+        plays[cols] = plays[cols].astype(numpy.float32)
+            
+    return plays
+
+
+def cache_pbp(years, downcast=True, alt_path=None):
+    """Cache pbp data in local location to allow for faster loading
+
+    Args:
+        years (List[int]): years to cache PBP data for
+        downcast (bool): convert float64 to float32, default True
+        alt_path (str): path for cache if not nfl_data_py default
+    Returns:
+        DataFrame
+    """
+
+    if not isinstance(years, (list, range)):
+        raise ValueError('Input must be list or range.')
+
+    if min(years) < 1999:
+        raise ValueError('Data not available before 1999.')
+
+    url1 = r'https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_'
+    url2 = r'.parquet'
+    appname = 'nfl_data_py'
+    appauthor = 'nflverse'
+
+    # define path for caching
+    if alt_path is not None:
+        path = str(alt_path)
+    else:
+        path = os.path.join(appdirs.user_cache_dir(appname, appauthor), 'pbp')
+
+    # check if drectory exists already
+    if not os.path.isdir(path):
+        os.makedirs(path)
+
+    # delete seasons to be replaced
+    for folder in [os.path.join(path, x) for x in os.listdir(path) for y in years if ('season='+str(y)) in x]:
+        for file in os.listdir(folder):
+            if file.endswith(".parquet"):
+                os.remove(os.path.join(folder, file))
+
+    # read in pbp data
+    for year in years:
+
+        try:
+
+            data = pandas.read_parquet(url1 + str(year) + url2, engine='auto')
+
+            raw = pandas.DataFrame(data)
+            raw['season'] = year
+
+            if year >= 2016:
+                path2 = r'https://github.com/nflverse/nflverse-data/releases/download/pbp_participation/pbp_participation_{}.parquet'.format(year)
+                part = pandas.read_parquet(path2)
+                raw = raw.merge(part, how='left', on=['play_id','old_game_id'])
+
+            if downcast:
+                cols = raw.select_dtypes(include=[numpy.float64]).columns
+                raw[cols] = raw[cols].astype(numpy.float32)
+
+            # write parquet to path, partitioned by season
+            raw.to_parquet(path, partition_cols='season')
+
+            print(str(year) + ' done.')
+
+        except Exception as e:
+            warn(
+                f"Caching failed for {year}, skipping.\n"
+                "In nfl_data_py 1.0, this will raise an exception.\n"
+                f"Failure: {e}",
+                DeprecationWarning,
+                stacklevel=2
+            )
+
+            next
+
 def get_football_data(game_season=int, game_team=str, game_week=int, cache=str):
     cache_path = cache
     seasons = [game_season]
     team = game_team
     week = game_week
+    season_str = f'season={game_season}'
     if seasons[0] == 2024:
-        game_df = nfl.import_pbp_data([2024],downcast=True)
+        game_df = import_pbp_data([2024],downcast=True)
     
     else:
-        if os.path.exists(cache_path):
-            game_df = nfl.import_pbp_data(seasons, cache=True,alt_path=cache_path)
+        if os.path.isdir(os.path.join(cache_path, season_str)):
+            game_df = import_pbp_data(seasons, cache=True,alt_path=cache_path)
         else:
-            nfl.cache_pbp(seasons, downcast=True, alt_path = cache_path)
-            game_df = nfl.import_pbp_data(seasons, cache=True,alt_path=cache_path)
+            cache_pbp(seasons, downcast=True, alt_path = cache_path)
+            game_df = import_pbp_data(seasons, cache=True,alt_path=cache_path)
     
     game_df = game_df.loc[game_df['week'] == week]
     game_df = game_df.loc[(game_df['home_team']==team) | (game_df['away_team']==team)]
     game_df.reset_index(inplace=True)
-    #df = df[['play_id','home_team', 'away_team', 'posteam', 'defteam', 'play_type_nfl', 'yardline_100', 'down', 'ydstogo', 'yards_gained','total_home_score', 'total_away_score', 'run_location', 'run_gap', 'air_yards', 'yards_after_catch', 'passer', 'rusher', 'receiver', 'touchdown', 'pass_touchdown', 'rush_touchdown', 'return_touchdown']]
     return game_df
 
-cache_path = r"cache"
-#df = get_football_data(2023, 'BUF', 12, cache_path)
+#cache_path = r"C:\Users\nick_\OneDrive\Desktop\Python\Projects\Fantasy\replay_test\cache"
+#df = get_football_data(2024, 'CIN', 1, cache_path)
+
+#Works
+#df = pd.read_excel(r"C:\Users\nick_\OneDrive\Desktop\Python\Projects\Fantasy\replay_test\game_data.xlsx")
 #playcount = len(df)
 
-##############################################################################
+############################################################################## Intro Loop
 
 def game_intro():
     intro = True
@@ -132,7 +424,7 @@ def game_intro():
     instruct_text_year = r"Please enter season (like '2021') and press enter"
     instruct_text_team = r"Please enter team (like 'BUF', 'CIN') and press enter"
     instruct_text_week = r"Please enter week (like '7') and press enter"
-    loading_text = r"Loading..."
+    loading_text = r"Loading..." + cache_path_g
     error_text = r"Retry? (click)"
     teams_avail_text = r"WAS TEN TB SF SEA PIT PHI NYJ NYG NO NE MIN MIA LV LAC LA KC JAX IND HOU GB DET DEN DAL CLE CIN CHI CAR BUF BAL ATL ARI"
     input_rect = pygame.Rect(WIDTH/2, HEIGHT/2, 10*font_size, 3*font_size)
@@ -227,7 +519,7 @@ def game_intro():
                 WIN.blit(inst_text_surface, (WIDTH/10, (HEIGHT/2) - spacer_unit))
                 pygame.display.flip()
                 
-                local_df = get_football_data(year_selected, team, week_selected, cache_path)
+                local_df = get_football_data(year_selected, team, week_selected, cache_path_g)
 
                 if len(local_df) == 0:
                     error = True
@@ -264,6 +556,7 @@ def game_intro():
 def main():
     yardlines = Yard_Lines(field_size)
     yardlines.get_lines()
+    announcer = game_text(text_box.centerx, text_box.centery - spacer_unit, ((text_box.width/2) - spacer_unit_small), (text_box.height/3)+(2*spacer_unit_small))
     run = True
     play = 0
     pygame.display.set_caption("Play by Play")
@@ -278,8 +571,8 @@ def main():
     fg = False
     extra_point = False
     two_point_conv = False
-    shotgun = False
     timeout = False
+
     
     home_team = df['home_team'][0]
     away_team = df['away_team'][0]
@@ -333,8 +626,20 @@ def main():
         qb_scramble = df['qb_scramble'][play]
         home_to = str(df['home_timeouts_remaining'][play])
         away_to = str(df['away_timeouts_remaining'][play])
+        announcer_text = str(df['desc'][play])
+        game_time = str(df['time'][play])
+        quarter = str(df['qtr'][play])
+        o_form = str(df['offense_formation'][play])
+        o_pers = str(df['offense_personnel'][play])
+        d_pers = str(df['defense_personnel'][play])
+        d_box = str(df['defenders_in_box'][play])
         
-        
+        pass_rushers = str(df['number_of_pass_rushers'][play])
+        time_tt = str(df['time_to_throw'][play])
+        was_press = df['was_pressure'][play]
+        route = str(df['route'][play])
+        man_zone = str(df['defense_man_zone_type'][play])
+        cover = str(df['defense_coverage_type'][play])
         ###################################################################### Define Play *
         if play_type == 'RUSH':
             run_location = str(df['run_location'][play])
@@ -398,10 +703,7 @@ def main():
             two_point_conv_res = str(df['two_point_conv_result'][play])
         else:
             two_point_conv = False
-        if df['shotgun'][play] > 0:
-            shotgun = True
-        else:
-            shotgun = False
+
         if play_type == 'TIMEOUT':
             timeout_team = str(df['timeout_team'][play])
             timeout = True
@@ -426,26 +728,12 @@ def main():
             pygame.draw.rect(WIN, DARK_RED, result_line)
         else:
             pass
-        
-        if reception:
-            if pass_loc == 'left':
-                pass_loc_ind = (pos_yard_line.centerx - int((yard*df['air_yards'][play])) - int(spacer_unit/2), pos_yard_line.centery + (pos_yard_line.height/3))
 
-            if pass_loc == 'middle':
-                pass_loc_ind = (pos_yard_line.centerx - int((yard*df['air_yards'][play])) - int(spacer_unit/2), pos_yard_line.centery - int(spacer_unit/2))
-
-            if pass_loc == 'right':
-                pass_loc_ind = (pos_yard_line.centerx - int((yard*df['air_yards'][play])) - int(spacer_unit/2), pos_yard_line.centery - (pos_yard_line.height/3))
-            
-            if pass_complete == 0:
-                WIN.blit(x_pic, pass_loc_ind)
-            
-            else:
-                WIN.blit(check_pic, pass_loc_ind)
                 
         pygame.draw.rect(WIN, WHITE, text_box)
         pygame.draw.rect(WIN, WHITE, env_box)
         pygame.draw.rect(WIN, GREY, coach_box)
+        announcer.write(announcer_text)
         
         ###################################################################### Define text static
         text1 = font.render("Offense: " + posteam, 1, GREY)
@@ -455,8 +743,8 @@ def main():
         text5 = font.render("Down: " + down, 1, GREY)
         text6 = font.render("Yards to Go: " + ydstogo, 1, GREY)
         text7 = font.render("Yards gained: " + yards_gained, 1, GREY)
-        text8 = font.render(home_team + " Score: " + home_score, 1, GREY)
-        text9 = font.render(away_team + " Score: " + away_score, 1, GREY)
+        text8 = font.render(home_team + " Score: " + home_score, 1, BLACK)
+        text9 = font.render(away_team + " Score: " + away_score, 1, BLACK)
         text10 = font.render("End Zone", 1, BLACK)
         text11 = font2.render("Chains", 1, ORANGE)
         pos_team_text = font2.render(posteam, 1, BLUE)
@@ -472,6 +760,14 @@ def main():
         away_to_text = font.render("Timeouts Remaining: " + away_to, 1, BLACK)
         
         ###################################################################### Define and blit Text Dynamic
+        if td:
+            pygame.draw.rect(WIN, YELLOW, end_z_1)
+            text_td = font2.render("TOUCHDOWN", 1, DARK_GREEN)
+            WIN.blit(text_td, (text_box.centerx + (text_box.centerx - text_box.left)/2, text_box.bottom - spacer_unit))
+        if first_down and not td:
+            pygame.draw.rect(WIN, YELLOW, chains)
+            text_fd = font2.render("First Down", 1, DARK_GREEN)
+            WIN.blit(text_fd, (text_box.centerx + (text_box.centerx - text_box.left)/2, text_box.bottom - spacer_unit))
         if rush:
             text_run_location = font2.render("Run Location: " + run_location, 1, GREY)
             text_run_gap = font2.render("Run Gap: " + run_gap, 1, GREY)
@@ -485,13 +781,22 @@ def main():
             text_yacatch = font2.render("YAC: " + yacatch, 1, GREY)
             text_pass_loc = font.render("Pass Location: " + pass_loc, 1, GREY)
             text_passer = font2.render("Passer: " + passer, 1, GREY)
-                
+            text_pass_rushers = font.render("Pass Rushers: " + pass_rushers, 1, RED)
+            text_time_tt = font.render("Time to throw: " + time_tt + " sec", 1, PURPLE)
+            text_route = font.render("Route: " + route, 1, PURPLE)
+            text_man_zone = font.render(man_zone, 1, RED)
+            text_cover = font.render(cover, 1, RED)
+            
+            WIN.blit(text_man_zone, (pos_yard_line.left - (2*spacer_unit) + spacer_unit_small, pos_yard_line.centery + 5*spacer_unit_small))
+            WIN.blit(text_cover, (pos_yard_line.left - (2*spacer_unit) + spacer_unit_small, pos_yard_line.centery + 7*spacer_unit_small))
+            WIN.blit(text_time_tt, (pos_yard_line.right + (2*spacer_unit_small), pos_yard_line.centery + 5*spacer_unit_small))
+            WIN.blit(text_pass_rushers, (pos_yard_line.left - (2*spacer_unit) + spacer_unit_small, pos_yard_line.centery + 3*spacer_unit_small))
             WIN.blit(text_receiver, (text_box.left + spacer_unit_small, text_box.bottom - spacer_unit))
             WIN.blit(text_passer, (text_box.centerx - 3*(text_box.centerx - text_box.left)/4, text_box.bottom - spacer_unit))
             WIN.blit(text_yacatch, (text_box.centerx - (text_box.centerx - text_box.left)/4, text_box.bottom - spacer_unit))
             WIN.blit(text_air_yards, (text_box.centerx - (text_box.centerx - text_box.left)/2, text_box.bottom - spacer_unit))
             WIN.blit(text_pass_loc, (text_box.centerx, text_box.bottom - spacer_unit))
-        
+            
             if pass_complete > 0:
                 text_pass_completion = font2.render("Pass Completed", 1, DARK_GREEN)
             else:
@@ -500,14 +805,28 @@ def main():
             if qb_hit > 0:
                 text_qb_hit = font2.render("QB Hit", 1, DARK_RED)
                 WIN.blit(text_qb_hit, (text_box.left + spacer_unit_small, text_box.bottom - (spacer_unit/2)))
-        if td:
-            pygame.draw.rect(WIN, YELLOW, end_z_1)
-            text_td = font2.render("TOUCHDOWN", 1, DARK_GREEN)
-            WIN.blit(text_td, (text_box.centerx + (text_box.centerx - text_box.left)/2, text_box.bottom - spacer_unit))
-        if first_down and not td:
-            pygame.draw.rect(WIN, YELLOW, chains)
-            text_fd = font2.render("First Down", 1, DARK_GREEN)
-            WIN.blit(text_fd, (text_box.centerx + (text_box.centerx - text_box.left)/2, text_box.bottom - spacer_unit))
+            if was_press > 0:
+                text_was_press = font.render("QB Pressured", 1, PURPLE)
+            else:
+                text_was_press = font.render("No QB Pressure", 1, PURPLE)
+            WIN.blit(text_was_press, (pos_yard_line.right + (2*spacer_unit_small), pos_yard_line.centery + 3*spacer_unit_small))
+
+        if reception:
+            if pass_loc == 'left':
+                pass_loc_ind = (pos_yard_line.centerx - int((yard*df['air_yards'][play])) - int(spacer_unit/2), pos_yard_line.centery + (pos_yard_line.height/3))
+
+            if pass_loc == 'middle':
+                pass_loc_ind = (pos_yard_line.centerx - int((yard*df['air_yards'][play])) - int(spacer_unit/2), pos_yard_line.centery - int(spacer_unit/2))
+
+            if pass_loc == 'right':
+                pass_loc_ind = (pos_yard_line.centerx - int((yard*df['air_yards'][play])) - int(spacer_unit/2), pos_yard_line.centery - (pos_yard_line.height/3))
+            WIN.blit(text_route, (pass_loc_ind[0], pass_loc_ind[1] - (2*spacer_unit_small)))
+            if pass_complete == 0:
+                WIN.blit(x_pic, pass_loc_ind)
+            
+            else:
+                WIN.blit(check_pic, pass_loc_ind)
+
         if sack:
             text_sacker = font2.render("Sacked by: " + sacker, 1, DARK_RED)
             WIN.blit(text_sacker, (text_box.centerx + (text_box.centerx - text_box.left)/2, text_box.bottom - spacer_unit))  
@@ -535,15 +854,28 @@ def main():
             td_prob = format(td_chance, ".2%")
             text_td_prob = font.render("Touchdown Probability: " + td_prob, 1, GREY)
             WIN.blit(text_td_prob, (text_box.centerx - text_box.width/4, text_box.top + spacer_unit_small))
-        if shotgun:
-            text_shotgun = font.render("In Shotgun", 1, BLUE)
-            WIN.blit(text_shotgun, (pos_yard_line.right + (7*spacer_unit_small), pos_yard_line.centery))
+        if reception or rush:
+            text_o_form = font.render(o_form, 1, PURPLE)
+            text_o_pers = font.render(o_pers, 1, PURPLE)
+            text_d_pers = font.render(d_pers, 1, RED)
+            text_d_box = font.render(d_box + " in box", 1, RED)
+            WIN.blit(text_o_form, (pos_yard_line.right + (2*spacer_unit_small), pos_yard_line.centery - spacer_unit_small))
+            WIN.blit(text_o_pers, (pos_yard_line.right + (2*spacer_unit_small), pos_yard_line.centery + spacer_unit_small))
+            WIN.blit(text_d_box, (pos_yard_line.left - (2*spacer_unit) + spacer_unit_small, pos_yard_line.centery - spacer_unit_small))
+            WIN.blit(text_d_pers, (pos_yard_line.left - (2*spacer_unit) + spacer_unit_small, pos_yard_line.centery + spacer_unit_small))
         if qb_scramble > 0:
             text_qb_scramble = font.render("QB Scramble", 1, BLUE)
             WIN.blit(text_qb_scramble, (pos_yard_line.right + (7*spacer_unit_small), pos_yard_line.centery + spacer_unit))
         if timeout:
             timeout_team_text = font2.render("Timeout Called by " + timeout_team, 1, GREY)
             WIN.blit(timeout_team_text, (text_box.left + spacer_unit_small, text_box.bottom - spacer_unit))
+        
+        announcer.draw(WIN)
+        time_text = font3.render("Game Clock: " + game_time, 1, BLACK)
+        quarter_text = font3.render("QTR: " + quarter, 1, BLACK)
+        WIN.blit(quarter_text, (text_box.centerx, text_box.top + spacer_unit_small))
+        WIN.blit(time_text, (text_box.centerx + int(text_box.width/6), text_box.top + spacer_unit_small))
+        
         ###################################################################### Blit Text Static
         
         WIN.blit(text1, (text_box.left + spacer_unit_small, text_box.top + spacer_unit_small))
@@ -555,10 +887,10 @@ def main():
         WIN.blit(text7, (text_box.left + spacer_unit_small, text_box.top + (13*spacer_unit_small)))
         WIN.blit(text8, (text_box.right - (12*spacer_unit_small), text_box.top + spacer_unit_small))
         WIN.blit(text9, (text_box.right - (12*spacer_unit_small), text_box.top + (3*spacer_unit_small)))
-        WIN.blit(text10, (end_z_1.left + (end_z_1.width/4), end_z_1.centery))
+        WIN.blit(text10, (end_z_1.left + (end_z_1.width/4), end_z_1.top + spacer_unit))
         WIN.blit(weather_text, (env_box.left + spacer_unit_small, env_box.top + (1.7*spacer_unit_small)))
         WIN.blit(stadium_text, (env_box.left + spacer_unit_small, env_box.top + (0.3*spacer_unit_small)))
-        WIN.blit(roof_text, (env_box.centerx, env_box.top + (0.3*spacer_unit_small)))
+        WIN.blit(roof_text, (env_box.centerx + int(env_box.width/4), env_box.top + (0.3*spacer_unit_small)))
         WIN.blit(home_team_text, (coach_box.left + spacer_unit_small, coach_box.top + spacer_unit_small))
         WIN.blit(away_team_text, (coach_box.centerx + spacer_unit_small, coach_box.top + spacer_unit_small))
         WIN.blit(home_coach_text, (coach_box.left + spacer_unit_small, coach_box.centery))
