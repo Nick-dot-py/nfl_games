@@ -23,6 +23,7 @@ info = pygame.display.Info()
 screen_width = info.current_w
 screen_height = info.current_h
 
+
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
@@ -37,35 +38,50 @@ DARK_GREEN = (0, 100, 0)
 DARK_RED = (100, 0, 0)
 SLATE_GREY = (47,79,79)
 LIGHT_BLUE = (0, 191, 255)
+DARK_GREY = (58, 58, 58)
 
-field_ratio = 0.444
+field_height_to_screen_ratio = 0.444
+field_width_to_screen_ratio = 1920/1080
 FPS = 300
 
 WIDTH, HEIGHT = round(screen_width/1.6), round(screen_height/1.2)
 WIN = pygame.display.set_mode((WIDTH,HEIGHT))
 
 spacer_unit = int(WIDTH/24)
-spacer_unit_small = int(WIDTH/120)
+spacer_unit_small = WIDTH/120
 font_size = int(spacer_unit_small)
+font_size_test = int(spacer_unit)
 
 clock = pygame.time.Clock()
 
-field_x = spacer_unit
-field_y = spacer_unit
-field_width = WIDTH - (12*spacer_unit_small)
-field_height = round(field_ratio*field_width)
-field_size = (field_x, field_y, field_width, field_height)
-yard = field_width/(12*spacer_unit_small)
-end_z_1 = pygame.Rect(spacer_unit, spacer_unit, yard*spacer_unit_small, field_height)
-end_z_2 = pygame.Rect(field_x + field_width - (yard*spacer_unit_small), field_y, yard*spacer_unit_small, field_height)
+field_width = screen_width/1.77778
+#field_x = spacer_unit
+#field_y = spacer_unit
+#field_width = screen_height
+#field_height = round(field_height_to_screen_ratio*field_width)
+#field_size = (field_x, field_y, field_width, field_height)
 
-chains = pygame.Rect(end_z_1.right, spacer_unit, yard, field_height)
+field = pygame.Rect(spacer_unit, spacer_unit, round(screen_width/field_width_to_screen_ratio), round(field_height_to_screen_ratio*field_width))
 
-pos_yard_line = pygame.Rect(end_z_1.right, spacer_unit, yard, field_height)
+yard = field.width/(12*spacer_unit_small)
 
-text_box = pygame.Rect(field_x, field_y + field_height, field_width, round(0.5*field_height))
-env_box = pygame.Rect(field_x + field_width/4, field_y - (3*spacer_unit_small), field_width/2, (3*spacer_unit_small))
-coach_box = pygame.Rect(field_x, field_y + field_height + text_box.height, field_width, (HEIGHT - text_box.bottom)/2)
+end_z_1 = pygame.Rect(field.left, field.top, yard*spacer_unit_small, field.height)
+end_z_2 = pygame.Rect(field.left + field.width - (yard*spacer_unit_small), field.top, yard*spacer_unit_small, field.height)
+
+black_space = pygame.Rect(0,0,WIDTH, HEIGHT)
+
+back_button_rect = pygame.Rect(0, 0, spacer_unit, spacer_unit/2)
+
+yard_scaled = (end_z_2.left-end_z_1.right)/100
+
+chains = pygame.Rect(end_z_1.right, spacer_unit, (end_z_2.left-end_z_1.right)/100, field.height)
+
+pos_yard_line = pygame.Rect(end_z_1.right, spacer_unit, (end_z_2.left-end_z_1.right)/100, field.height)
+
+text_box = pygame.Rect(field.left, field.top + field.height, field.width, round(0.5*field.height))
+env_box = pygame.Rect(field.left + field.width/4, field.top - (3*spacer_unit_small), field.width/2, (3*spacer_unit_small))
+coach_box = pygame.Rect(field.left, field.top + field.height + text_box.height, field.width, (HEIGHT - text_box.bottom)/2)
+ftn_box = pygame.Rect(field.left, coach_box.bottom, field.width, (HEIGHT - text_box.bottom)/4)
 
 win_chart = pygame.Rect(text_box.centerx - text_box.width/4, text_box.top + spacer_unit, (text_box.width/4) - spacer_unit_small, spacer_unit)
 epa_chart = pygame.Rect(text_box.centerx - text_box.width/4, win_chart.bottom + 2*spacer_unit_small, (text_box.width/4) - spacer_unit_small, spacer_unit)
@@ -73,6 +89,7 @@ epa_chart = pygame.Rect(text_box.centerx - text_box.width/4, win_chart.bottom + 
 font = pygame.font.SysFont(r"arial", round(1.2*font_size), True, False)
 font2 = pygame.font.SysFont(r"arial", round(1.2*font_size), True, True)
 font3 = pygame.font.SysFont(r"arial", 2*font_size)
+
 
 season_options = list(range(2000, 2025))
 team_options =  ('WAS', 'TEN', 'TB', 'SF', 'SEA', 'PIT', 'PHI', 'NYJ', 'NYG', 'NO', 'NE', 'MIN', 'MIA', 'LV', 'LAC', 'LA', 'KC', 'JAX', 'IND', 'HOU', 'GB', 'DET', 'DEN', 'DAL', 'CLE', 'CIN', 'CHI', 'CAR', 'BUF', 'BAL', 'ATL', 'ARI')
@@ -97,12 +114,62 @@ class Yard_Lines:
     def __init__(self, field):
         self.lines = []
         self.color = BLACK
-        self.height = field[3]
-        self.position = (field[0] + (yard*spacer_unit_small), field[1])
+        self.height = field.height
+        self.position = (end_z_1.right, field.top)
     def get_lines(self):
         for i in range(0, 11):
-            self.lines.append(pygame.Rect((self.position[0] + i*(yard*spacer_unit_small)), self.position[1], yard, self.height))
+            self.lines.append(pygame.Rect((self.position[0] + i*(yard*spacer_unit_small)), self.position[1], yard_scaled, self.height))
 
+class Button():
+    def __init__(self, color, text_color, butt_rect):
+        self.rect = butt_rect
+        self.text_color = text_color
+        self.color = color
+        self.font_size = spacer_unit
+        self.contained = False
+        
+    def standardize(self, text):
+        while not self.contained:
+            self.font = pygame.font.SysFont(r"arial", round(self.font_size), True, False)
+            self.text = self.font.render(text, 1, self.text_color)
+            if self.text.get_width() < self.rect.width - spacer_unit_small and self.text.get_height() < self.rect.height - spacer_unit_small:
+                self.contained = True
+            else:
+                self.font_size -= 1
+                
+    def draw(self, win):
+        pygame.draw.rect(win, self.color, self.rect)
+        pygame.draw.rect(win, WHITE, self.rect, 2, 1)
+        win.blit(self.text, (self.rect.left + (self.text.get_width()/2), self.rect.centery - (self.text.get_height()/2)))
+        
+class Series:
+    def __init__(self, data = list, column_names = list):
+        self.cells = {}
+        self.index1 = 0
+        self.index2 = 0
+        self.rects = []
+        for i in data:
+            if i:
+                self.cells[column_names[self.index1]] = i
+                
+            self.index1 += 1
+    def build_rect(self, win, series_rect):
+        if len(self.cells) > 0:
+            self.width = min((series_rect.width/len(self.cells)) - 2, series_rect.width/4)
+            for i in range(len(self.cells)):
+                self.rects.append(pygame.Rect(series_rect.left + i*self.width + 2, series_rect.top + 2, self.width, series_rect.height))
+            for i in self.rects:
+                pygame.draw.rect(win, WHITE, i, 2, 1)
+            for key, value in self.cells.items():
+                name_text = font.render(key, 1, WHITE)
+                win.blit(name_text, (self.rects[self.index2].left + 2, self.rects[self.index2].top + 2))
+                if type(value) == bool:
+                    val_text = font.render("Yes", 1, GREEN)
+                else:
+                    val_text = font.render(str(value), 1, PURPLE)
+                win.blit(val_text, (self.rects[self.index2].left + 2, self.rects[self.index2].centery + 2))
+                self.index2 += 1
+                
 class game_text:
     def __init__(self, surf_x, surf_y, surf_width, surf_height):
         self.surf_x = surf_x
@@ -246,11 +313,11 @@ def import_pbp_data(
             if cache:
                 seasonStr = f'season={year}'
                 if not os.path.isdir(os.path.join(dpath, seasonStr)):
-                    print(dpath)
+
                     raise ValueError(f'{year} cache file does not exist.')
                 for fname in filter(lambda x: seasonStr in x, os.listdir(dpath)):
                     folder = os.path.join(dpath, fname)
-                    print(dpath)
+
                     for file in os.listdir(folder):
                         if file.endswith(".parquet"):
                             fpath = os.path.join(folder, file)
@@ -378,6 +445,67 @@ def cache_pbp(years, downcast=True, alt_path=None):
 
             next
 
+def import_ftn_data(
+        years, 
+        columns=None, 
+        downcast=True,
+        thread_requests=False
+    ):
+    """Imports FTN charting data
+    
+    FTN Data manually charts plays and has graciously provided a subset of their
+    charting data to be published via the nflverse. Data is available from the 2022
+    season onwards and is charted within 48 hours following each game. This data
+    is released under the [CC-BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
+    Creative Commons license and attribution must be made to **FTN Data via nflverse**
+    
+    Args:
+        years (List[int]): years to get weekly data for
+        columns (List[str]): only return these columns, default None
+        downcast (bool): convert float64 to float32, default True
+        thread_requests (bool): use thread pool to read files, default False
+    Returns:
+        DataFrame
+    """
+    
+    # check variable types
+    if not isinstance(years, (list, range)):
+        raise ValueError('Input must be list or range.')
+        
+    if min(years) < 2022:
+        raise ValueError('Data not available before 2022.')
+
+    url = r'https://github.com/nflverse/nflverse-data/releases/download/ftn_charting/ftn_charting_{0}.parquet'
+
+    if thread_requests:
+        with ThreadPoolExecutor() as executor:
+            # Create a list of the same size as years, initialized with None
+            data = [None]*len(years)
+            # Create a mapping of futures to their corresponding index in the data
+            futures_map = {
+                executor.submit(
+                    pandas.read_parquet,
+                    path=url.format(year),
+                    columns=columns if columns else None,
+                    engine='auto'
+                ): idx
+                for idx, year in enumerate(years)
+            }
+            for future in as_completed(futures_map):
+                data[futures_map[future]] = future.result()
+            data = pandas.concat(data)
+    else:
+        # read charting data
+        data = pandas.concat([pandas.read_parquet(url.format(x), engine='auto', columns=columns) for x in years])
+
+    # converts float64 to float32, saves ~30% memory
+    if downcast:
+        print('Downcasting floats.')
+        cols = data.select_dtypes(include=[numpy.float64]).columns
+        data[cols] = data[cols].astype(numpy.float32)
+
+    return data
+
 def get_football_data(game_season=int, game_team=str, game_week=int, cache=str):
     cache_path = cache
     seasons = [game_season]
@@ -399,12 +527,15 @@ def get_football_data(game_season=int, game_team=str, game_week=int, cache=str):
     game_df.reset_index(inplace=True)
     return game_df
 
-#cache_path = r"C:\Users\nick_\OneDrive\Desktop\Python\Projects\Fantasy\replay_test\cache"
-#df = get_football_data(2024, 'CIN', 1, cache_path)
-
-#Works
-#df = pd.read_excel(r"C:\Users\nick_\OneDrive\Desktop\Python\Projects\Fantasy\replay_test\game_data.xlsx")
-#playcount = len(df)
+def get_ftn_data(df_init):
+    season = [df_init['season'][1]]
+    game_id = df_init['game_id'][1]
+    columns = ['nflverse_game_id', 'nflverse_play_id', 'starting_hash', 'qb_location', 'n_offense_backfield', 'n_defense_box', 'is_no_huddle', 'is_motion', 'is_play_action', 'is_screen_pass', 'is_rpo', 'is_trick_play', 'is_qb_out_of_pocket', 'is_interception_worthy', 'is_throw_away', 'read_thrown', 'is_catchable_ball', 'is_contested_ball', 'is_created_reception', 'is_drop', 'is_qb_sneak', 'n_blitzers', 'n_pass_rushers', 'is_qb_fault_sack']
+    ftn_df = import_ftn_data(season, columns)
+    ftn_df = ftn_df.loc[ftn_df['nflverse_game_id'] == game_id]
+    ftn_df.rename(columns={"nflverse_play_id" : "play_id"}, inplace=True)
+    adv_df = pandas.merge(df_init, ftn_df, on="play_id", how="left")
+    return adv_df
 
 ############################################################################## Intro Loop
 
@@ -424,22 +555,26 @@ def game_intro():
     team_selected = False
     error = False
     data_error = False
+    ftn_mode = False
+    data_complete = False
+    add_ftn = False
     instruct_text_year = r"Please enter season (like '2021') and press enter"
     instruct_text_team = r"Please enter team (like 'BUF', 'CIN') and press enter"
     instruct_text_week = r"Please enter week (like '7') and press enter"
+    instruct_text_ftn = r"FTN data available. Would you like to view FTN data as well?"
     loading_text = r"Loading..." + cache_path_g
     error_text = r"Retry? (click)"
     teams_avail_text = r"WAS TEN TB SF SEA PIT PHI NYJ NYG NO NE MIN MIA LV LAC LA KC JAX IND HOU GB DET DEN DAL CLE CIN CHI CAR BUF BAL ATL ARI"
     input_rect = pygame.Rect(WIDTH/2, HEIGHT/2, 10*font_size, 3*font_size)
     error_rect = pygame.Rect(WIDTH/2, HEIGHT/2, 20*font_size, 5*font_size)
+    yes_rect = pygame.Rect(WIDTH/4, 2*(HEIGHT/3), 20*font_size, 5*font_size)
+    no_rect = pygame.Rect(3*(WIDTH/4), 2*(HEIGHT/3), 20*font_size, 5*font_size)
     while intro:
         clock.tick(FPS)
         WIN.fill(BLACK)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 intro = False
-                print(year, team, week)
-
                 pygame.quit()
                 sys.exit()
 
@@ -449,20 +584,26 @@ def game_intro():
                 else:
                     active = False
                 if error and error_rect.collidepoint(event.pos):
-                        user_text = ''
-                        year = ''
-                        team = ''
-                        week = ''
-                        instruct_text = 'Hi'
-                        color_passive = GREY
-                        color_active = WHITE
-                        box_color = color_passive
-                        active = False
-                        year_selected = False
-                        week_selected = False
-                        team_selected = False
-                        error = False
-                        data_error = False
+                    user_text = ''
+                    year = ''
+                    team = ''
+                    week = ''
+                    instruct_text = 'Hi'
+                    color_passive = GREY
+                    color_active = WHITE
+                    box_color = color_passive
+                    active = False
+                    year_selected = False
+                    week_selected = False
+                    team_selected = False
+                    error = False
+                    data_error = False
+                if ftn_mode:
+                    if no_rect.collidepoint(event.pos):
+                        data_complete = True
+                        ftn_mode = False
+                    if yes_rect.collidepoint(event.pos):
+                        add_ftn = True
             if event.type == pygame.KEYDOWN:
                 if active == True:
                     if event.key == pygame.K_BACKSPACE:
@@ -497,9 +638,6 @@ def game_intro():
         elif not week_selected:
             instruct_text = instruct_text_week
         else:
-            #instruct_text = loading_text
-            #inst_text_surface = font3.render(instruct_text, True, WHITE)
-            #WIN.blit(inst_text_surface, (WIDTH/10, (HEIGHT/2) - spacer_unit))
             try:
                 year_selected = int(year)
                 if year_selected not in season_options:
@@ -516,20 +654,40 @@ def game_intro():
             if team not in team_options:
                 error = True
                 instruct_text = 'Team not available'
-            if not error:
-                instruct_text = loading_text
-                inst_text_surface = font3.render(instruct_text, True, WHITE)
-                WIN.blit(inst_text_surface, (WIDTH/10, (HEIGHT/2) - spacer_unit))
-                pygame.display.flip()
-                
-                local_df = get_football_data(year_selected, team, week_selected, cache_path_g)
-
-                if len(local_df) == 0:
-                    error = True
-                    data_error = True
+            if not data_complete and not error:
+                if year_selected in [2022, 2023, 2024]:
+                    instruct_text = instruct_text_ftn
+                    ftn_mode = True
                 else:
-                    intro = False
-                    return local_df
+                    data_complete = True
+                    
+            if not error:
+                if add_ftn:
+                    instruct_text = loading_text
+                    inst_text_surface = font3.render(instruct_text, True, WHITE)
+                    WIN.blit(inst_text_surface, (WIDTH/10, (HEIGHT/2) - spacer_unit))
+                    pygame.display.flip()
+                    local_df = get_football_data(year_selected, team, week_selected, cache_path_g)
+                    local_df_plus = get_ftn_data(local_df)
+                    if len(local_df_plus) == 0:
+                        error = True
+                        data_error = True
+                    else:
+                        intro = False
+                        return local_df_plus
+                if data_complete:
+                    instruct_text = loading_text
+                    inst_text_surface = font3.render(instruct_text, True, WHITE)
+                    WIN.blit(inst_text_surface, (WIDTH/10, (HEIGHT/2) - spacer_unit))
+                    pygame.display.flip()
+                    local_df = get_football_data(year_selected, team, week_selected, cache_path_g)
+
+                    if len(local_df) == 0:
+                        error = True
+                        data_error = True
+                    else:
+                        intro = False
+                        return local_df
                 
         if not week_selected:
             pygame.draw.rect(WIN,box_color,input_rect,2)
@@ -547,6 +705,14 @@ def game_intro():
             inst_text_surface = font3.render(instruct_text, True, WHITE)
             WIN.blit(inst_text_surface, (WIDTH/2, (HEIGHT/2) - spacer_unit))
         
+        if ftn_mode:
+            yes_button = Button(GREY, WHITE, yes_rect)
+            no_button = Button(GREY, WHITE, no_rect)
+            yes_button.standardize("Yes")
+            no_button.standardize("No")
+            yes_button.draw(WIN)
+            no_button.draw(WIN)
+        
         #WIN.blit(inst_text_surface, (WIDTH/10, (HEIGHT/2) - spacer_unit))
         WIN.blit(user_text_surface, (input_rect.x + 10, input_rect.y + 5))
         
@@ -556,11 +722,15 @@ def game_intro():
 
 
 
-def main():
-    yardlines = Yard_Lines(field_size)
+def game(df):
+    game = True
+    yardlines = Yard_Lines(field)
     yardlines.get_lines()
     announcer = game_text(text_box.centerx, text_box.centery - spacer_unit, ((text_box.width/2) - spacer_unit_small), (text_box.height/3)+(2*spacer_unit_small))
-    run = True
+    
+    back_button = Button(GREY, BLACK, back_button_rect)
+    back_button.standardize("Back")
+
     play = 0
     pygame.display.set_caption("Play by Play")
     playcount = len(df)
@@ -587,14 +757,25 @@ def main():
     roof = str(df['roof'][1])
     season = int(df['season'][0])
     surface = str(df['surface'][0])
-    while run:
+    if 'starting_hash' in df.columns:
+        ftn_data = True
+    else:
+        ftn_data = False
+        
+    while game:
         clock.tick(FPS)
         
         ###################################################################### Get User Input
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                run = False
-            
+                game = False
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if back_button.rect.collidepoint(event.pos):
+                    game = False
+                    #pygame.quit()
+                    #sys.exit()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RIGHT:
                     if play < playcount - 1:
@@ -602,16 +783,16 @@ def main():
                     if math.isnan(df['yardline_100'][play]):
                         continue
                     else:
-                        chains.centerx = field_x + (yard*spacer_unit_small) +yard*(df['yardline_100'][play] - df['ydstogo'][play])
-                        pos_yard_line.centerx = field_x + (yard*spacer_unit_small) +yard*(df['yardline_100'][play])
+                        chains.centerx = end_z_1.right + (end_z_2.left-end_z_1.right)*((df['yardline_100'][play] - df['ydstogo'][play])/100)
+                        pos_yard_line.left = end_z_1.right + (end_z_2.left-end_z_1.right)*((df['yardline_100'][play])/100)
                 if event.key == pygame.K_LEFT:
                     if play > 0:
                         play -=1
                     if math.isnan(df['yardline_100'][play]):
                         continue
                     else:
-                        chains.centerx = field_x + (yard*spacer_unit_small) + yard*(df['yardline_100'][play] - df['ydstogo'][play])
-                        pos_yard_line.centerx = field_x + (yard*spacer_unit_small) +yard*(df['yardline_100'][play])
+                        chains.centerx = end_z_1.right + (end_z_2.left-end_z_1.right)*((df['yardline_100'][play] - df['ydstogo'][play])/100)
+                        pos_yard_line.left = end_z_1.right + (end_z_2.left-end_z_1.right)*((df['yardline_100'][play])/100)
         
         ###################################################################### Get play variables *
         posteam = str(df['posteam'][play])
@@ -644,7 +825,8 @@ def main():
         away_epa_norm = df['total_away_epa'][play]/epa_limit
 
         # 2024 Dep
-        if season != 2024:
+        if 2015 < season < 2024:
+
             o_form = str(df['offense_formation'][play])
             o_pers = str(df['offense_personnel'][play])
             d_pers = str(df['defense_personnel'][play])
@@ -726,9 +908,62 @@ def main():
             timeout = True
         else:
             timeout = False
-        
+        if ftn_data:
+            if announcer_text not in ['GAME', 'END QUARTER 1', 'END QUARTER 2', 'END QUARTER 3', 'END GAME']:
+                no_huddle = df['is_no_huddle'][play]
+                trick_play = df['is_trick_play'][play]
+                if reception or rush:
+                    motion = df['is_motion'][play]
+                    play_action = df['is_play_action'][play]
+                    run_pass_option = df['is_rpo'][play]
+                    qb_out_of_pocket = df['is_qb_out_of_pocket'][play]
+                    throw_away = df['is_throw_away'][play]
+                    read_thrown = df['read_thrown'][play] #Not bool
+                    if reception:
+                        screen_pass = df['is_screen_pass'][play]
+                        interception_possible = df['is_interception_worthy'][play]
+                        catchable = df['is_catchable_ball'][play]
+                        contested = df['is_contested_ball'][play]
+                        dropped = df['is_drop'][play]
+                        blitzers = df['n_blitzers'][play]
+                else:
+                    play_action = False
+                    run_pass_option = False
+                    qb_out_of_pocket = False
+                    throw_away = False
+                    read_thrown = False
+                    screen_pass = False
+                    interception_possible = False
+                    catchable = False
+                    contested = False
+                    dropped = False
+                    blitzers = False
+                if sack:
+                    qb_fault_sack = df['is_qb_fault_sack'][play]
+                else:
+                    qb_fault_sack = False
+            else:
+                no_huddle = False
+                trick_play = False
+                motion = False
+                play_action = False
+                run_pass_option = False
+                qb_out_of_pocket = False
+                throw_away = False
+                read_thrown = False
+                screen_pass = False
+                interception_possible = False
+                catchable = False
+                contested = False
+                dropped = False
+                blitzers = False
+                qb_fault_sack = False
+
         ###################################################################### Draw field and indicators and text boxes
-        pygame.draw.rect(WIN, GREEN, field_size)
+        pygame.draw.rect(WIN, BLACK, black_space)
+        back_button.draw(WIN)
+
+        pygame.draw.rect(WIN, GREEN, field)
         pygame.draw.rect(WIN, GREY, end_z_1)
         pygame.draw.rect(WIN, GREY, end_z_2)
         for i in yardlines.lines:
@@ -738,10 +973,10 @@ def main():
         pygame.draw.rect(WIN, BLUE, pos_yard_line)
         
         if play_result > 0:
-            result_line = (pos_yard_line.centerx - (play_result*yard), field_y + field_height - yard, (play_result*yard), yard)
+            result_line = (pos_yard_line.left - (play_result*yard_scaled), field.top + field.height - yard_scaled, (play_result*yard_scaled), yard_scaled)
             pygame.draw.rect(WIN, DARK_GREEN, result_line)
         elif play_result < 0:
-            result_line = (pos_yard_line.centerx, field_y + field_height - yard, abs(play_result*yard), yard)
+            result_line = (pos_yard_line.left, field.top + field.height - yard_scaled, abs(play_result*yard_scaled), yard_scaled)
             pygame.draw.rect(WIN, DARK_RED, result_line)
         else:
             pass
@@ -751,7 +986,10 @@ def main():
         pygame.draw.rect(WIN, WHITE, env_box)
         pygame.draw.rect(WIN, GREY, coach_box)
         announcer.write(announcer_text)
-        
+        if ftn_data:
+            pygame.draw.rect(WIN, DARK_GREY, ftn_box)
+            ftn_series = Series([no_huddle, trick_play, motion, play_action, run_pass_option, qb_out_of_pocket, throw_away, read_thrown, screen_pass, interception_possible, catchable, contested, dropped, blitzers, qb_fault_sack], ["no_huddle", "trick_play", "motion", "play_action", "run_pass_option", "qb_out_of_pocket", "throw_away", "read_thrown", "screen_pass", "interception_possible", "catchable", "contested", "dropped", "blitzers", "qb_fault_sack"])
+            ftn_series.build_rect(WIN, ftn_box)
         ###################################################################### Define text static
         text1 = font.render("Offense: " + posteam, 1, GREY)
         text2 = font.render("Defense: " + defteam, 1, GREY)
@@ -804,7 +1042,7 @@ def main():
             WIN.blit(text_air_yards, (text_box.centerx - (text_box.centerx - text_box.left)/2, text_box.bottom - spacer_unit))
             WIN.blit(text_pass_loc, (text_box.centerx, text_box.bottom - spacer_unit))
             # 2024 Dep
-            if season != 2024:
+            if 2015 < season < 2024:
                 text_pass_rushers = font.render("Pass Rushers: " + pass_rushers, 1, RED)
                 text_time_tt = font.render("Time to throw: " + time_tt + " sec", 1, PURPLE)
                 text_route = font.render("Route: " + route, 1, PURPLE)
@@ -823,7 +1061,7 @@ def main():
                 text_qb_hit = font2.render("QB Hit", 1, DARK_RED)
                 WIN.blit(text_qb_hit, (text_box.left + spacer_unit_small, text_box.bottom - (spacer_unit/2)))                
             # 2024 Dep
-            if season != 2024:
+            if 2015 < season < 2024:
                 if was_press > 0:
                     text_was_press = font.render("QB Pressured", 1, PURPLE)
                 else:
@@ -832,15 +1070,15 @@ def main():
 
         if reception:
             if pass_loc == 'left':
-                pass_loc_ind = (pos_yard_line.centerx - int((yard*df['air_yards'][play])) - int(spacer_unit/2), pos_yard_line.centery + (pos_yard_line.height/3))
+                pass_loc_ind = (pos_yard_line.centerx - int((yard_scaled*df['air_yards'][play])) - int(spacer_unit/2), pos_yard_line.centery + (pos_yard_line.height/3))
 
             if pass_loc == 'middle':
-                pass_loc_ind = (pos_yard_line.centerx - int((yard*df['air_yards'][play])) - int(spacer_unit/2), pos_yard_line.centery - int(spacer_unit/2))
+                pass_loc_ind = (pos_yard_line.centerx - int((yard_scaled*df['air_yards'][play])) - int(spacer_unit/2), pos_yard_line.centery - int(spacer_unit/2))
 
             if pass_loc == 'right':
-                pass_loc_ind = (pos_yard_line.centerx - int((yard*df['air_yards'][play])) - int(spacer_unit/2), pos_yard_line.centery - (pos_yard_line.height/3))
+                pass_loc_ind = (pos_yard_line.centerx - int((yard_scaled*df['air_yards'][play])) - int(spacer_unit/2), pos_yard_line.centery - (pos_yard_line.height/3))
             # 2024 Dep
-            if season != 2024:
+            if 2015 < season < 2024:
                 WIN.blit(text_route, (pass_loc_ind[0], pass_loc_ind[1] - (2*spacer_unit_small)))
             if pass_complete == 0:
                 WIN.blit(x_pic, pass_loc_ind)
@@ -876,7 +1114,7 @@ def main():
             text_td_prob = font.render("Touchdown Probability: " + td_prob, 1, GREY)
             WIN.blit(text_td_prob, (text_box.centerx - text_box.width/4, text_box.top + spacer_unit_small))
         if reception or rush:
-            if season != 2024:
+            if 2015 < season < 2024:
                 text_o_form = font.render(o_form, 1, PURPLE)
                 text_o_pers = font.render(o_pers, 1, PURPLE)
                 text_d_pers = font.render(d_pers, 1, RED)
@@ -954,17 +1192,22 @@ def main():
         WIN.blit(away_coach_text, (coach_box.centerx + spacer_unit_small, coach_box.centery))
         WIN.blit(home_to_text, (coach_box.left + (coach_box.width/4), coach_box.centery))
         WIN.blit(away_to_text, (coach_box.centerx + (coach_box.width/4), coach_box.centery))
+        
         ###################################################################### Blit Field Text
-        WIN.blit(pos_team_text, (pos_yard_line.right + (7*spacer_unit_small), pos_yard_line.centery - (10*spacer_unit_small)))
+        WIN.blit(pos_team_text, (pos_yard_line.right + (2*spacer_unit_small), pos_yard_line.centery - (10*spacer_unit_small)))
         WIN.blit(text11, (chains.left - (7*spacer_unit_small), chains.centery - (10*spacer_unit_small)))
 
-        
         ###################################################################### Update Display
         pygame.display.flip()
-        
-    pygame.quit()
 
+
+def main():
+    run = True
+    
+    while run:
+        df_selected = game_intro()
+        game(df_selected)
+    
 
 if __name__ == "__main__":
-    df = game_intro()
     main()
