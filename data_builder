@@ -35,6 +35,11 @@ cumulative = False
 data_slct = []
 data_granularity = ""
 
+dist_weeks_mode = False
+dist_szn_mode = False
+start_end_wk_mode = False
+start_end_szn_mode = False
+
 seasons = list(range(2016,2025))
 weeks = list(range(1,21))
 by_week_options = []
@@ -124,8 +129,78 @@ def data_gran():
         radbutton_perf_startend_szns.config(state=NORMAL)
 
 def timeframeSlct():
+    global dist_weeks_mode
+    global dist_szn_mode
+    global start_end_wk_mode
+    global start_end_szn_mode
     if(z.get()==1):
-        dist_weeks = True
+        dist_weeks_mode = True
+        dist_szn_mode = False
+        start_end_wk_mode = False
+        start_end_szn_mode = False
+        drop_week_dist.config(state=NORMAL)
+        drop_szn_dist.config(state=DISABLED)
+        drop_week_start.config(state=DISABLED)
+        drop_szn_start.config(state=DISABLED)
+        drop_szn_end.config(state=DISABLED)
+        drop_week_end.config(state=DISABLED)
+    elif(z.get()==2):
+        dist_szn_mode = True
+        dist_weeks_mode = False
+        start_end_wk_mode = False
+        start_end_szn_mode = False
+        drop_week_dist.config(state=DISABLED)
+        drop_szn_dist.config(state=NORMAL)
+        drop_week_start.config(state=DISABLED)
+        drop_szn_start.config(state=DISABLED)
+        drop_szn_end.config(state=DISABLED)
+        drop_week_end.config(state=DISABLED)
+    elif(z.get()==3):
+        start_end_wk_mode = True
+        dist_weeks_mode = False
+        dist_szn_mode = False
+        start_end_szn_mode = False
+        drop_week_dist.config(state=DISABLED)
+        drop_szn_dist.config(state=DISABLED)
+        drop_week_start.config(state=NORMAL)
+        drop_szn_start.config(state=DISABLED)
+        drop_szn_end.config(value=[" "],state=DISABLED)
+        drop_szn_end.current(0)
+    elif(z.get()==4):
+        start_end_szn_mode = True
+        dist_weeks_mode = False
+        dist_szn_mode = False
+        start_end_wk_mode = False
+        drop_week_dist.config(state=DISABLED)
+        drop_szn_dist.config(state=DISABLED)
+        drop_week_start.config(state=DISABLED)
+        drop_week_end.config(value=[" "],state=DISABLED)
+        drop_week_end.current(0)
+        drop_szn_start.config(state=NORMAL)
+
+def pick_week(e):
+    pass
+
+def pick_season(e):
+    pass
+
+def pick_start_week(e):
+    s_week = drop_week_start.get()
+    drop_week_end.config(value=by_week_options[by_week_options.index(s_week)+1:],state=NORMAL)
+    pass
+
+def pick_end_week(e):
+    e_week = drop_week_end.get()
+    pass
+
+def pick_start_season(e):
+    s_szn = drop_szn_start.get()
+    drop_szn_end.config(value=by_season_options[by_season_options.index(s_szn)+1:],state=NORMAL)
+    pass
+
+def pick_end_season(e):
+    e_szn = drop_szn_end.get()
+    pass
 
 # Window Tabs
 
@@ -326,9 +401,9 @@ slct_dataButton.place(relx=5/6,rely=5/6)
 drop_week_dist = ttk.Combobox(perf_sub3, value=by_week_options)
 drop_szn_dist = ttk.Combobox(perf_sub3, value=by_season_options)
 drop_week_start = ttk.Combobox(perf_sub3, value=by_week_options)
-drop_week_end = ttk.Combobox(perf_sub3, value=by_week_options)
+drop_week_end = ttk.Combobox(perf_sub3, value=[" "])
 drop_szn_start = ttk.Combobox(perf_sub3, value=by_season_options)
-drop_szn_end = ttk.Combobox(perf_sub3, value=by_season_options)
+drop_szn_end = ttk.Combobox(perf_sub3, value=[" "])
 
 drop_week_dist.place(relx=1/6,rely=1/4)
 drop_szn_dist.place(relx=1/2,rely=1/4)
@@ -336,6 +411,21 @@ drop_week_start.place(relx=1/6,rely=5/8)
 drop_week_end.place(relx=1/6,rely=7/8)
 drop_szn_start.place(relx=1/2,rely=5/8)
 drop_szn_end.place(relx=1/2,rely=7/8)
+
+drop_week_dist.bind("<<ComboboxSelected>>", pick_week)
+drop_szn_dist.bind("<<ComboboxSelected>>", pick_season)
+drop_week_start.bind("<<ComboboxSelected>>", pick_start_week)
+drop_week_end.bind("<<ComboboxSelected>>", pick_end_week)
+drop_szn_start.bind("<<ComboboxSelected>>", pick_start_season)
+drop_szn_end.bind("<<ComboboxSelected>>", pick_end_season)
+
+drop_week_dist.config(state=DISABLED)
+drop_szn_dist.config(state=DISABLED)
+drop_week_start.config(state=DISABLED)
+drop_szn_start.config(state=DISABLED)
+
+drop_week_end.config(state=DISABLED)
+drop_szn_end.config(state=DISABLED)
 
 what_data()
 
