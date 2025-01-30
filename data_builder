@@ -393,7 +393,7 @@ def rem_qb():
     global dist_qb_select
     global dist_player_selections
     if dist_qb_select in dist_player_selections:
-        dist_player_selections.pop(dist_qb_select)
+        dist_player_selections.pop(dist_player_selections.index(dist_qb_select))
     display_string = "Selected: "
     for i in dist_player_selections:
         if dist_player_selections.index(i) == len(dist_player_selections) - 1:
@@ -420,7 +420,7 @@ def rem_wr():
     global dist_wr_select
     global dist_player_selections
     if dist_wr_select in dist_player_selections:
-        dist_player_selections.pop(dist_wr_select)
+        dist_player_selections.pop(dist_player_selections.index(dist_wr_select))
     display_string = "Selected: "
     for i in dist_player_selections:
         if dist_player_selections.index(i) == len(dist_player_selections) - 1:
@@ -447,7 +447,7 @@ def rem_rb():
     global dist_rb_select
     global dist_player_selections
     if dist_rb_select in dist_player_selections:
-        dist_player_selections.pop(dist_rb_select)
+        dist_player_selections.pop(dist_player_selections.index(dist_rb_select))
     display_string = "Selected: "
     for i in dist_player_selections:
         if dist_player_selections.index(i) == len(dist_player_selections) - 1:
@@ -474,7 +474,7 @@ def rem_te():
     global dist_te_select
     global dist_player_selections
     if dist_te_select in dist_player_selections:
-        dist_player_selections.pop(dist_te_select)
+        dist_player_selections.pop(dist_player_selections.index(dist_te_select))
     display_string = "Selected: "
     for i in dist_player_selections:
         if dist_player_selections.index(i) == len(dist_player_selections) - 1:
