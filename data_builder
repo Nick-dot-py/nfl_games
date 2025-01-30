@@ -6,6 +6,7 @@ Created on Wed Jan 29 23:38:03 2025
 """
 from tkinter import *
 from tkinter import ttk
+import pickle
 
 # windows = serves as a container to hold or contain these widgets
 # widgets = GUI elements: buttons, textboxes, labels, images
@@ -29,10 +30,37 @@ y = IntVar()
 z = IntVar()
 dist_wk_select = ""
 dist_szn_select = ""
-what_data_std = False
-what_data_slct = False
 
+dist_qb_select = ""
+dist_wr_select = ""
+dist_rb_select = ""
+dist_te_select = ""
 
+qb_check = IntVar()
+wr_check = IntVar()
+rb_check = IntVar()
+te_check = IntVar()
+
+#with open("player_id.pkl", "rb") as f:
+#    player_id = pickle.load(f)
+
+with open("player_pos.pkl", "rb") as f:
+    player_pos = pickle.load(f)
+    
+with open("pos_player.pkl", "rb") as f:
+    pos_player = pickle.load(f)
+
+player_names = list(player_pos.keys())
+
+qbs = pos_player['QB']
+rbs = pos_player['RB']
+wrs = pos_player['WR']
+tes = pos_player['TE']
+
+qbs.sort()
+rbs.sort()
+wrs.sort()
+tes.sort()
 
 seasons = list(range(2016,2025))
 weeks = list(range(1,21))
@@ -56,6 +84,13 @@ start_end_szn_mode = False
 
 what_data_std = False       #standard data
 what_data_slct = False      #select data
+
+all_qbs = False             #select players
+all_wrs = False
+all_rbs = False
+all_tes = False
+
+dist_player_selections = []
 
 # 180 selections
 for i in seasons:
@@ -284,7 +319,169 @@ def pick_end_season(e):
     global end_szn
     end_szn = drop_szn_end.get()
 
+def qb_select_all():
+    global all_qbs
+    if(qb_check.get()==1):
+        all_qbs = True
+        drop_qb_dist.config(state=DISABLED)
+    else:
+        all_qbs = False
+        drop_qb_dist.config(state=NORMAL)
 
+def wr_select_all():
+    global all_wrs
+    if(wr_check.get()==1):
+        all_wrs = True
+        drop_wr_dist.config(state=DISABLED)
+    else:
+        all_wrs = False
+        drop_wr_dist.config(state=NORMAL)
+
+def rb_select_all():
+    global all_rbs
+    if(rb_check.get()==1):
+        all_rbs = True
+        drop_rb_dist.config(state=DISABLED)
+    else:
+        all_rbs = False
+        drop_rb_dist.config(state=NORMAL)
+    
+def te_select_all():
+    global all_tes
+    if(te_check.get()==1):
+        all_tes = True
+        drop_te_dist.config(state=DISABLED)
+    else:
+        all_tes = False
+        drop_te_dist.config(state=NORMAL)
+
+def pick_qb(e):
+    global dist_qb_select
+    dist_qb_select = drop_qb_dist.get()
+    add_dist_qbButton.config(state=NORMAL)
+    
+def pick_wr(e):
+    global dist_wr_select
+    dist_wr_select = drop_wr_dist.get()
+    add_dist_wrButton.config(state=NORMAL)
+
+def pick_rb(e):
+    global dist_rb_select
+    dist_rb_select = drop_rb_dist.get()
+    add_dist_rbButton.config(state=NORMAL)
+
+def pick_te(e):
+    global dist_te_select
+    dist_te_select = drop_te_dist.get()
+    add_dist_teButton.config(state=NORMAL)
+
+def add_qb():
+    global dist_qb_select
+    global dist_player_selections
+    if dist_qb_select not in dist_player_selections:
+        dist_player_selections.append(dist_qb_select)
+    rem_dist_qbButton.config(state=ACTIVE)
+    display_string = "Selected: "
+    for i in dist_player_selections:
+        if dist_player_selections.index(i) == len(dist_player_selections) - 1:
+            display_string += str(i)
+        else:
+            display_string += str(i)+" + "
+    dist_player_label.config(text=display_string, fg="WHITE")
+    
+def rem_qb():
+    global dist_qb_select
+    global dist_player_selections
+    if dist_qb_select in dist_player_selections:
+        dist_player_selections.pop(dist_qb_select)
+    display_string = "Selected: "
+    for i in dist_player_selections:
+        if dist_player_selections.index(i) == len(dist_player_selections) - 1:
+            display_string += str(i)
+        else:
+            display_string += str(i)+" + "
+    dist_player_label.config(text=display_string, fg="WHITE")
+    
+def add_wr():
+    global dist_wr_select
+    global dist_player_selections
+    if dist_wr_select not in dist_player_selections:
+        dist_player_selections.append(dist_wr_select)
+    rem_dist_wrButton.config(state=ACTIVE)
+    display_string = "Selected: "
+    for i in dist_player_selections:
+        if dist_player_selections.index(i) == len(dist_player_selections) - 1:
+            display_string += str(i)
+        else:
+            display_string += str(i)+" + "
+    dist_player_label.config(text=display_string, fg="WHITE")
+    
+def rem_wr():
+    global dist_wr_select
+    global dist_player_selections
+    if dist_wr_select in dist_player_selections:
+        dist_player_selections.pop(dist_wr_select)
+    display_string = "Selected: "
+    for i in dist_player_selections:
+        if dist_player_selections.index(i) == len(dist_player_selections) - 1:
+            display_string += str(i)
+        else:
+            display_string += str(i)+" + "
+    dist_player_label.config(text=display_string, fg="WHITE")
+
+def add_rb():
+    global dist_rb_select
+    global dist_player_selections
+    if dist_rb_select not in dist_player_selections:
+        dist_player_selections.append(dist_rb_select)
+    rem_dist_rbButton.config(state=ACTIVE)
+    display_string = "Selected: "
+    for i in dist_player_selections:
+        if dist_player_selections.index(i) == len(dist_player_selections) - 1:
+            display_string += str(i)
+        else:
+            display_string += str(i)+" + "
+    dist_player_label.config(text=display_string, fg="WHITE")
+    
+def rem_rb():
+    global dist_rb_select
+    global dist_player_selections
+    if dist_rb_select in dist_player_selections:
+        dist_player_selections.pop(dist_rb_select)
+    display_string = "Selected: "
+    for i in dist_player_selections:
+        if dist_player_selections.index(i) == len(dist_player_selections) - 1:
+            display_string += str(i)
+        else:
+            display_string += str(i)+" + "
+    dist_player_label.config(text=display_string, fg="WHITE")
+
+def add_te():
+    global dist_te_select
+    global dist_player_selections
+    if dist_te_select not in dist_player_selections:
+        dist_player_selections.append(dist_te_select)
+    rem_dist_teButton.config(state=ACTIVE)
+    display_string = "Selected: "
+    for i in dist_player_selections:
+        if dist_player_selections.index(i) == len(dist_player_selections) - 1:
+            display_string += str(i)
+        else:
+            display_string += str(i)+" + "
+    dist_player_label.config(text=display_string, fg="WHITE")
+    
+def rem_te():
+    global dist_te_select
+    global dist_player_selections
+    if dist_te_select in dist_player_selections:
+        dist_player_selections.pop(dist_te_select)
+    display_string = "Selected: "
+    for i in dist_player_selections:
+        if dist_player_selections.index(i) == len(dist_player_selections) - 1:
+            display_string += str(i)
+        else:
+            display_string += str(i)+" + "
+    dist_player_label.config(text=display_string, fg="WHITE")
 # Window Tabs
 
 notebook = ttk.Notebook(window)         #widget that manages a colection of windows/displays
@@ -360,6 +557,57 @@ dist_label = Label(perf_sub3,
 
 dist_label.place(relx=1/12,rely=0)
 
+players_label1 = Label(perf_sub4,
+              text="QBs",
+              font=('Arial',spacer_unit, 'bold'),
+              fg='WHITE',
+              bg='#45454a',
+              bd=spacer_unit_small,
+              padx=spacer_unit_small,
+              pady=spacer_unit_small)
+
+players_label2 = Label(perf_sub4,
+              text="WRs",
+              font=('Arial',spacer_unit, 'bold'),
+              fg='WHITE',
+              bg='#45454a',
+              bd=spacer_unit_small,
+              padx=spacer_unit_small,
+              pady=spacer_unit_small)
+
+players_label3 = Label(perf_sub4,
+              text="RBs",
+              font=('Arial',spacer_unit, 'bold'),
+              fg='WHITE',
+              bg='#45454a',
+              bd=spacer_unit_small,
+              padx=spacer_unit_small,
+              pady=spacer_unit_small)
+
+players_label4 = Label(perf_sub4,
+              text="TEs",
+              font=('Arial',spacer_unit, 'bold'),
+              fg='WHITE',
+              bg='#45454a',
+              bd=spacer_unit_small,
+              padx=spacer_unit_small,
+              pady=spacer_unit_small)
+
+players_label1.place(relx=1/5,rely=1/10)
+players_label2.place(relx=2/5,rely=1/10)
+players_label3.place(relx=3/5,rely=1/10)
+players_label4.place(relx=4/5,rely=1/10)
+
+dist_player_label = Label(perf_sub4,
+              text="Selected:",
+              font=('Arial',round(2*spacer_unit/3), 'bold'),
+              fg='#a2a2a5',
+              bg='#16161d',
+              bd=spacer_unit_small,
+              padx=spacer_unit_small,
+              pady=spacer_unit_small)
+
+dist_player_label.place(relx=1/12,rely=0)
 
 # Buttons
 get_data_button = Button(window, text='Get Data')
@@ -393,6 +641,38 @@ add_dist_sznButton.config(state=DISABLED)
 rem_dist_sznButton = Button(perf_sub3, text="Remove", command=rem_season)
 rem_dist_sznButton.place(relx=7/12,rely=3/8)
 rem_dist_sznButton.config(state=DISABLED)
+
+add_dist_qbButton = Button(perf_sub4, text="Add...", command=add_qb)
+add_dist_qbButton.place(relx=1/5,rely=4/5)
+add_dist_qbButton.config(state=DISABLED)
+
+rem_dist_qbButton = Button(perf_sub4, text="Remove", command=rem_qb)
+rem_dist_qbButton.place(relx=3/10,rely=4/5)
+rem_dist_qbButton.config(state=DISABLED)
+
+add_dist_wrButton = Button(perf_sub4, text="Add...", command=add_wr)
+add_dist_wrButton.place(relx=2/5,rely=4/5)
+add_dist_wrButton.config(state=DISABLED)
+
+rem_dist_wrButton = Button(perf_sub4, text="Remove", command=rem_wr)
+rem_dist_wrButton.place(relx=1/2,rely=4/5)
+rem_dist_wrButton.config(state=DISABLED)
+
+add_dist_rbButton = Button(perf_sub4, text="Add...", command=add_rb)
+add_dist_rbButton.place(relx=3/5,rely=4/5)
+add_dist_rbButton.config(state=DISABLED)
+
+rem_dist_rbButton = Button(perf_sub4, text="Remove", command=rem_rb)
+rem_dist_rbButton.place(relx=7/10,rely=4/5)
+rem_dist_rbButton.config(state=DISABLED)
+
+add_dist_teButton = Button(perf_sub4, text="Add...", command=add_te)
+add_dist_teButton.place(relx=4/5,rely=4/5)
+add_dist_teButton.config(state=DISABLED)
+
+rem_dist_teButton = Button(perf_sub4, text="Remove", command=rem_te)
+rem_dist_teButton.place(relx=9/10,rely=4/5)
+rem_dist_teButton.config(state=DISABLED)
 
 # Radio Buttons Section 1
 radbutton_perf_data_standard = Radiobutton(perf_sub1,
@@ -492,6 +772,18 @@ radbutton_perf_dist_szns.config(state=DISABLED)
 radbutton_perf_startend_week.config(state=DISABLED)
 radbutton_perf_startend_szns.config(state=DISABLED)
 
+# Checkboxes
+
+checkbox_qb = Checkbutton(perf_sub4,text='All',variable=qb_check,onvalue=1,offvalue=0,command=qb_select_all)
+checkbox_wr = Checkbutton(perf_sub4,text='All',variable=wr_check,onvalue=1,offvalue=0,command=wr_select_all)
+checkbox_rb = Checkbutton(perf_sub4,text='All',variable=rb_check,onvalue=1,offvalue=0,command=rb_select_all)
+checkbox_te = Checkbutton(perf_sub4,text='All',variable=te_check,onvalue=1,offvalue=0,command=te_select_all)
+
+checkbox_qb.place(relx=1/5,rely=3/10)
+checkbox_wr.place(relx=2/5,rely=3/10)
+checkbox_rb.place(relx=3/5,rely=3/10)
+checkbox_te.place(relx=4/5,rely=3/10)
+
 # listboxes
 slct_data_listbox = Listbox(perf_sub1,
                             bg="#45454a",
@@ -517,12 +809,22 @@ drop_week_end = ttk.Combobox(perf_sub3, value=[" "])
 drop_szn_start = ttk.Combobox(perf_sub3, value=by_season_options)
 drop_szn_end = ttk.Combobox(perf_sub3, value=[" "])
 
+drop_qb_dist = ttk.Combobox(perf_sub4, value = qbs)
+drop_wr_dist = ttk.Combobox(perf_sub4, value = wrs)
+drop_rb_dist = ttk.Combobox(perf_sub4, value = rbs)
+drop_te_dist = ttk.Combobox(perf_sub4, value = tes)
+
 drop_week_dist.place(relx=1/6,rely=1/4)
 drop_szn_dist.place(relx=1/2,rely=1/4)
 drop_week_start.place(relx=1/6,rely=5/8)
 drop_week_end.place(relx=1/6,rely=7/8)
 drop_szn_start.place(relx=1/2,rely=5/8)
 drop_szn_end.place(relx=1/2,rely=7/8)
+
+drop_qb_dist.place(relx=1/5,rely=3/5)
+drop_wr_dist.place(relx=2/5,rely=3/5)
+drop_rb_dist.place(relx=3/5,rely=3/5)
+drop_te_dist.place(relx=4/5,rely=3/5)
 
 
 drop_week_dist.bind("<<ComboboxSelected>>", pick_week)
@@ -531,6 +833,11 @@ drop_week_start.bind("<<ComboboxSelected>>", pick_start_week)
 drop_week_end.bind("<<ComboboxSelected>>", pick_end_week)
 drop_szn_start.bind("<<ComboboxSelected>>", pick_start_season)
 drop_szn_end.bind("<<ComboboxSelected>>", pick_end_season)
+
+drop_qb_dist.bind("<<ComboboxSelected>>", pick_qb)
+drop_wr_dist.bind("<<ComboboxSelected>>", pick_wr)
+drop_rb_dist.bind("<<ComboboxSelected>>", pick_rb)
+drop_te_dist.bind("<<ComboboxSelected>>", pick_te)
 
 drop_week_dist.config(state=DISABLED)
 drop_szn_dist.config(state=DISABLED)
