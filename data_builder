@@ -27,23 +27,35 @@ selection_complete = False
 x = IntVar()
 y = IntVar()
 z = IntVar()
+dist_wk_select = ""
+dist_szn_select = ""
 what_data_std = False
 what_data_slct = False
-by_week = False
-by_season = False
-cumulative = False
-data_slct = []
-data_granularity = ""
 
-dist_weeks_mode = False
-dist_szn_mode = False
-start_end_wk_mode = False
-start_end_szn_mode = False
+
 
 seasons = list(range(2016,2025))
 weeks = list(range(1,21))
 by_week_options = []
 by_season_options = []
+
+# Global Variables to determine output
+data_granularity = ""
+data_slct = []              #select data options
+dist_week_selections = []   #if dist_weeks_mode
+dist_season_selections = [] #if dist_szn_mode
+start_week = ""
+end_week = ""
+start_szn = ""
+end_szn = ""
+
+dist_weeks_mode = False     #how to slice data
+dist_szn_mode = False
+start_end_wk_mode = False
+start_end_szn_mode = False
+
+what_data_std = False       #standard data
+what_data_slct = False      #select data
 
 # 180 selections
 for i in seasons:
@@ -65,10 +77,7 @@ window.config(background="#d0d0d2")
 
 # Functions
 def click():
-    if what_data_std:
-        print(what_data_std, data_granularity)
-    elif what_data_slct:
-        print(what_data_slct, data_slct, data_granularity)
+    pass
 
 def what_data():
     global what_data_std
@@ -81,6 +90,7 @@ def what_data():
         radbutton_perf_gran_week.config(state=NORMAL)
         radbutton_perf_gran_szn.config(state=NORMAL)
         radbutton_perf_gran_cum.config(state=NORMAL)
+        slct_dataButton.config(state=DISABLED)
     elif(x.get()==2):
         perf_std_label1.config(fg='#a2a2a5')
         what_data_std = False
@@ -91,6 +101,7 @@ def what_data():
         radbutton_perf_gran_week.config(state=DISABLED)
         radbutton_perf_gran_szn.config(state=DISABLED)
         radbutton_perf_gran_cum.config(state=DISABLED)
+        slct_dataButton.config(state=ACTIVE)
 
 
 def submitSlct():
@@ -144,6 +155,8 @@ def timeframeSlct():
         drop_szn_start.config(state=DISABLED)
         drop_szn_end.config(state=DISABLED)
         drop_week_end.config(state=DISABLED)
+        add_dist_sznButton.config(state=DISABLED)
+        rem_dist_sznButton.config(state=DISABLED)
     elif(z.get()==2):
         dist_szn_mode = True
         dist_weeks_mode = False
@@ -155,6 +168,8 @@ def timeframeSlct():
         drop_szn_start.config(state=DISABLED)
         drop_szn_end.config(state=DISABLED)
         drop_week_end.config(state=DISABLED)
+        add_dist_weekButton.config(state=DISABLED)
+        rem_dist_weekButton.config(state=DISABLED)
     elif(z.get()==3):
         start_end_wk_mode = True
         dist_weeks_mode = False
@@ -166,6 +181,7 @@ def timeframeSlct():
         drop_szn_start.config(state=DISABLED)
         drop_szn_end.config(value=[" "],state=DISABLED)
         drop_szn_end.current(0)
+        dist_label.config(fg="#a2a2a5")
     elif(z.get()==4):
         start_end_szn_mode = True
         dist_weeks_mode = False
@@ -177,30 +193,97 @@ def timeframeSlct():
         drop_week_end.config(value=[" "],state=DISABLED)
         drop_week_end.current(0)
         drop_szn_start.config(state=NORMAL)
+        dist_label.config(fg="#a2a2a5")
+
+def add_week():
+    global dist_week_selections
+    global dist_wk_select
+    if dist_wk_select not in dist_week_selections:
+        dist_week_selections.append(dist_wk_select)
+    rem_dist_weekButton.config(state=ACTIVE)
+    display_string = "Selected: "
+    for i in dist_week_selections:
+        if dist_week_selections.index(i) == len(dist_week_selections) - 1:
+            display_string += str(i)
+        else:
+            display_string += str(i)+" + "
+    dist_label.config(text=display_string, fg="WHITE")
+
+def add_season():
+    global dist_season_selections
+    global dist_szn_select
+    if dist_szn_select not in dist_season_selections:
+        dist_season_selections.append(dist_szn_select)
+    rem_dist_sznButton.config(state=ACTIVE)
+    display_string = "Selected: "
+    for i in dist_season_selections:
+        if dist_season_selections.index(i) == len(dist_season_selections) - 1:
+            display_string += str(i)
+        else:
+            display_string += str(i)+" + "
+    dist_label.config(text=display_string, fg="WHITE")
+
+def rem_week():
+    global dist_week_selections
+    global dist_wk_select
+    if dist_wk_select in dist_week_selections:
+        dist_week_selections.pop(dist_week_selections.index(dist_wk_select))
+    display_string = "Selected: "
+    for i in dist_week_selections:
+        if dist_week_selections.index(i) == len(dist_week_selections) - 1:
+            display_string += str(i)
+        else:
+            display_string += str(i)+" + "
+    dist_label.config(text=display_string, fg="WHITE")
+
+
+def rem_season():
+    global dist_season_selections
+    global dist_szn_select
+    if dist_szn_select in dist_season_selections:
+        dist_season_selections.pop(dist_season_selections.index(dist_szn_select))
+    display_string = "Selected: "
+    for i in dist_season_selections:
+        if dist_season_selections.index(i) == len(dist_season_selections) - 1:
+            display_string += str(i)
+        else:
+            display_string += str(i)+" + "
+    dist_label.config(text=display_string, fg="WHITE")
+
 
 def pick_week(e):
-    pass
+    global dist_wk_select
+    dist_wk_select = drop_week_dist.get()
+    add_dist_weekButton.config(state=ACTIVE)
+
 
 def pick_season(e):
-    pass
+    global dist_szn_select
+    dist_szn_select = drop_szn_dist.get()
+    add_dist_sznButton.config(state=ACTIVE)
+
 
 def pick_start_week(e):
+    global start_week
     s_week = drop_week_start.get()
     drop_week_end.config(value=by_week_options[by_week_options.index(s_week)+1:],state=NORMAL)
-    pass
+    start_week = s_week
 
 def pick_end_week(e):
-    e_week = drop_week_end.get()
-    pass
+    global end_week
+    end_week = drop_week_end.get()
+
 
 def pick_start_season(e):
+    global start_szn
     s_szn = drop_szn_start.get()
     drop_szn_end.config(value=by_season_options[by_season_options.index(s_szn)+1:],state=NORMAL)
-    pass
+    start_szn = s_szn
 
 def pick_end_season(e):
-    e_szn = drop_szn_end.get()
-    pass
+    global end_szn
+    end_szn = drop_szn_end.get()
+
 
 # Window Tabs
 
@@ -266,6 +349,17 @@ perf_std_label2 = Label(perf_sub1,
 
 perf_std_label2.place(relx=2/3,rely=1/4)
 
+dist_label = Label(perf_sub3,
+              text="Selected:",
+              font=('Arial',round(2*spacer_unit/3), 'bold'),
+              fg='#a2a2a5',
+              bg='#45454a',
+              bd=spacer_unit_small,
+              padx=spacer_unit_small,
+              pady=spacer_unit_small)
+
+dist_label.place(relx=1/12,rely=0)
+
 
 # Buttons
 get_data_button = Button(window, text='Get Data')
@@ -279,6 +373,26 @@ get_data_button.config(fg='WHITE')
 get_data_button.config(state=DISABLED) # disables button (ACTIVE/DISABLED)
 
 get_data_button.place(x=spacer_unit,y=(HEIGHT - 3*spacer_unit))
+
+slct_dataButton = Button(perf_sub1, text="Submit", command=submitSlct)
+slct_dataButton.place(relx=5/6,rely=5/6)
+slct_dataButton.config(state=DISABLED)
+
+add_dist_weekButton = Button(perf_sub3, text="Add...", command=add_week)
+add_dist_weekButton.place(relx=1/6,rely=3/8)
+add_dist_weekButton.config(state=DISABLED)
+
+rem_dist_weekButton = Button(perf_sub3, text="Remove", command=rem_week)
+rem_dist_weekButton.place(relx=3/12,rely=3/8)
+rem_dist_weekButton.config(state=DISABLED)
+
+add_dist_sznButton = Button(perf_sub3, text="Add...", command=add_season)
+add_dist_sznButton.place(relx=1/2,rely=3/8)
+add_dist_sznButton.config(state=DISABLED)
+
+rem_dist_sznButton = Button(perf_sub3, text="Remove", command=rem_season)
+rem_dist_sznButton.place(relx=7/12,rely=3/8)
+rem_dist_sznButton.config(state=DISABLED)
 
 # Radio Buttons Section 1
 radbutton_perf_data_standard = Radiobutton(perf_sub1,
@@ -394,8 +508,6 @@ slct_data_listbox.config(height=slct_data_listbox.size())
 
 slct_data_listbox.config(state=DISABLED)
 
-slct_dataButton = Button(perf_sub1, text="Submit", command=submitSlct)
-slct_dataButton.place(relx=5/6,rely=5/6)
 
 # Dropboxes
 drop_week_dist = ttk.Combobox(perf_sub3, value=by_week_options)
@@ -411,6 +523,7 @@ drop_week_start.place(relx=1/6,rely=5/8)
 drop_week_end.place(relx=1/6,rely=7/8)
 drop_szn_start.place(relx=1/2,rely=5/8)
 drop_szn_end.place(relx=1/2,rely=7/8)
+
 
 drop_week_dist.bind("<<ComboboxSelected>>", pick_week)
 drop_szn_dist.bind("<<ComboboxSelected>>", pick_season)
