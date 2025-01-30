@@ -26,6 +26,7 @@ spacer_unit_small = round(spacer_unit/6)
 selection_complete = False
 x = IntVar()
 y = IntVar()
+z = IntVar()
 what_data_std = False
 what_data_slct = False
 by_week = False
@@ -33,6 +34,18 @@ by_season = False
 cumulative = False
 data_slct = []
 data_granularity = ""
+
+seasons = list(range(2016,2025))
+weeks = list(range(1,21))
+by_week_options = []
+by_season_options = []
+
+# 180 selections
+for i in seasons:
+    for j in weeks:
+        by_week_options.append(str(i)+" Season, Week "+str(j))
+    by_season_options.append(str(i)+" Season")
+
 
 # Define Window Dimensions
 window.geometry(f"{WIDTH}x{HEIGHT}")
@@ -93,10 +106,26 @@ def data_gran():
     global data_granularity
     if(y.get()==1):
         data_granularity = "Week"
+        radbutton_perf_dist_weeks.config(state=NORMAL)
+        radbutton_perf_dist_szns.config(state=DISABLED)
+        radbutton_perf_startend_week.config(state=NORMAL)
+        radbutton_perf_startend_szns.config(state=DISABLED)
     elif(y.get()==2):
         data_granularity = "Season"
+        radbutton_perf_dist_weeks.config(state=DISABLED)
+        radbutton_perf_dist_szns.config(state=NORMAL)
+        radbutton_perf_startend_week.config(state=DISABLED)
+        radbutton_perf_startend_szns.config(state=NORMAL)
     elif(y.get()==3):
         data_granularity = "Cumulative"
+        radbutton_perf_dist_weeks.config(state=NORMAL)
+        radbutton_perf_dist_szns.config(state=NORMAL)
+        radbutton_perf_startend_week.config(state=NORMAL)
+        radbutton_perf_startend_szns.config(state=NORMAL)
+
+def timeframeSlct():
+    if(z.get()==1):
+        dist_weeks = True
 
 # Window Tabs
 
@@ -222,7 +251,6 @@ radbutton_perf_gran_cum = Radiobutton(perf_sub2,
                                          pady = spacer_unit_small,
                                          bg="#737377",
                                          command=data_gran)
-
 radbutton_perf_gran_week.place(relx=1/4,rely=1/2)
 radbutton_perf_gran_szn.place(relx=1/2,rely=1/2)
 radbutton_perf_gran_cum.place(relx=3/4,rely=1/2)
@@ -230,6 +258,50 @@ radbutton_perf_gran_cum.place(relx=3/4,rely=1/2)
 radbutton_perf_gran_week.config(state=DISABLED)
 radbutton_perf_gran_szn.config(state=DISABLED)
 radbutton_perf_gran_cum.config(state=DISABLED)
+
+# Radio Buttons Section 3
+radbutton_perf_dist_weeks = Radiobutton(perf_sub3,
+                                           text="Distinct Weeks", #adds text to radiobuttons
+                                           variable=z, #groups radiobuttons together if they share the same variable
+                                           value=1,     #assigns each radiobutton a different value
+                                           padx = spacer_unit_small,
+                                           pady = spacer_unit_small,
+                                           bg="#737377",
+                                           command=timeframeSlct) 
+radbutton_perf_dist_szns = Radiobutton(perf_sub3,
+                                           text="Distinct Seasons", #adds text to radiobuttons
+                                           variable=z, #groups radiobuttons together if they share the same variable
+                                           value=2,     #assigns each radiobutton a different value
+                                           padx = spacer_unit_small,
+                                           pady = spacer_unit_small,
+                                           bg="#737377",
+                                           command=timeframeSlct)
+radbutton_perf_startend_week = Radiobutton(perf_sub3,
+                                           text="Start Week End Week", #adds text to radiobuttons
+                                           variable=z, #groups radiobuttons together if they share the same variable
+                                           value=3,     #assigns each radiobutton a different value
+                                           padx = spacer_unit_small,
+                                           pady = spacer_unit_small,
+                                           bg="#737377",
+                                           command=timeframeSlct)
+radbutton_perf_startend_szns = Radiobutton(perf_sub3,
+                                           text="Start Season End Season", #adds text to radiobuttons
+                                           variable=z, #groups radiobuttons together if they share the same variable
+                                           value=4,     #assigns each radiobutton a different value
+                                           padx = spacer_unit_small,
+                                           pady = spacer_unit_small,
+                                           bg="#737377",
+                                           command=timeframeSlct)
+
+radbutton_perf_dist_weeks.place(relx=1/3,rely=1/4)
+radbutton_perf_dist_szns.place(relx=2/3,rely=1/4)
+radbutton_perf_startend_week.place(relx=1/3,rely=3/4)
+radbutton_perf_startend_szns.place(relx=2/3,rely=3/4)
+
+radbutton_perf_dist_weeks.config(state=DISABLED)
+radbutton_perf_dist_szns.config(state=DISABLED)
+radbutton_perf_startend_week.config(state=DISABLED)
+radbutton_perf_startend_szns.config(state=DISABLED)
 
 # listboxes
 slct_data_listbox = Listbox(perf_sub1,
@@ -249,6 +321,21 @@ slct_data_listbox.config(state=DISABLED)
 
 slct_dataButton = Button(perf_sub1, text="Submit", command=submitSlct)
 slct_dataButton.place(relx=5/6,rely=5/6)
+
+# Dropboxes
+drop_week_dist = ttk.Combobox(perf_sub3, value=by_week_options)
+drop_szn_dist = ttk.Combobox(perf_sub3, value=by_season_options)
+drop_week_start = ttk.Combobox(perf_sub3, value=by_week_options)
+drop_week_end = ttk.Combobox(perf_sub3, value=by_week_options)
+drop_szn_start = ttk.Combobox(perf_sub3, value=by_season_options)
+drop_szn_end = ttk.Combobox(perf_sub3, value=by_season_options)
+
+drop_week_dist.place(relx=1/6,rely=1/4)
+drop_szn_dist.place(relx=1/2,rely=1/4)
+drop_week_start.place(relx=1/6,rely=5/8)
+drop_week_end.place(relx=1/6,rely=7/8)
+drop_szn_start.place(relx=1/2,rely=5/8)
+drop_szn_end.place(relx=1/2,rely=7/8)
 
 what_data()
 
