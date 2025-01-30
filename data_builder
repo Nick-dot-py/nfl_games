@@ -1,0 +1,255 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Jan 29 23:38:03 2025
+
+@author: nick_
+"""
+from tkinter import *
+from tkinter import ttk
+
+# windows = serves as a container to hold or contain these widgets
+# widgets = GUI elements: buttons, textboxes, labels, images
+# label = an area widget that holds text and/or an image within a window
+# radio button = can only select 1 from a group
+# frame = rectangular container to group and hold widgets
+# listbox = A listing of selectable text items within it's own container
+
+window = Tk() #instantiate an instance of a window
+
+# Global Variables
+screen_width = window.winfo_screenwidth()
+screen_height = window.winfo_screenheight()
+WIDTH, HEIGHT = round(screen_width/1.6), round(screen_height/1.6)
+spacer_unit = round(WIDTH/100)
+spacer_unit_small = round(spacer_unit/6)
+
+selection_complete = False
+x = IntVar()
+y = IntVar()
+what_data_std = False
+what_data_slct = False
+by_week = False
+by_season = False
+cumulative = False
+data_slct = []
+data_granularity = ""
+
+# Define Window Dimensions
+window.geometry(f"{WIDTH}x{HEIGHT}")
+window.title("Data Builder")
+
+# Create Icon
+icon = PhotoImage(file=r"pics\icon.png")
+window.iconphoto(True,icon)
+
+# Define Window Color
+window.config(background="#d0d0d2")
+
+# Functions
+def click():
+    if what_data_std:
+        print(what_data_std, data_granularity)
+    elif what_data_slct:
+        print(what_data_slct, data_slct, data_granularity)
+
+def what_data():
+    global what_data_std
+    global what_data_slct
+    if(x.get()==1):
+        what_data_std = True
+        what_data_slct = False
+        perf_std_label1.config(fg='WHITE')
+        perf_std_label2.config(text="Selected:",fg='#a2a2a5')
+        radbutton_perf_gran_week.config(state=NORMAL)
+        radbutton_perf_gran_szn.config(state=NORMAL)
+        radbutton_perf_gran_cum.config(state=NORMAL)
+    elif(x.get()==2):
+        perf_std_label1.config(fg='#a2a2a5')
+        what_data_std = False
+        what_data_slct = True
+        global data_slct
+        data_slct = []
+        slct_data_listbox.config(state=NORMAL)
+        radbutton_perf_gran_week.config(state=DISABLED)
+        radbutton_perf_gran_szn.config(state=DISABLED)
+        radbutton_perf_gran_cum.config(state=DISABLED)
+
+
+def submitSlct():
+    global data_slct
+
+    display_string = "Selected:"
+    for index in slct_data_listbox.curselection():
+        data_slct.insert(index,slct_data_listbox.get(index))
+        string_add = str(slct_data_listbox.get(index))
+        display_string += f"\n {string_add}"
+    perf_std_label2.config(text=display_string, fg="WHITE")
+    slct_data_listbox.config(state=DISABLED)
+    radbutton_perf_gran_week.config(state=NORMAL)
+    radbutton_perf_gran_szn.config(state=NORMAL)
+    radbutton_perf_gran_cum.config(state=NORMAL)
+
+def data_gran():
+    global data_granularity
+    if(y.get()==1):
+        data_granularity = "Week"
+    elif(y.get()==2):
+        data_granularity = "Season"
+    elif(y.get()==3):
+        data_granularity = "Cumulative"
+
+# Window Tabs
+
+notebook = ttk.Notebook(window)         #widget that manages a colection of windows/displays
+notebook.pack(padx=spacer_unit,pady=spacer_unit,expand=True,fill="both")  #expand to fill any space not otherwise used
+                                        #fill = fill space on x and y axis
+                                        
+perftab = Frame(notebook, bg="#16161d")                  #new frame for tab 1
+statictab = Frame(notebook)                  #new frame for tab 1
+contracttab = Frame(notebook) 
+injurytab = Frame(notebook) 
+rostertab = Frame(notebook) 
+
+
+statictab.pack(fill="both", expand=True)
+contracttab.pack(fill="both", expand=True)
+injurytab.pack(fill="both", expand=True)
+rostertab.pack(fill="both", expand=True)
+
+notebook.add(perftab,text="Performance Data")
+notebook.add(statictab,text="Static Data")
+notebook.add(contracttab,text="Contract Data")
+notebook.add(injurytab,text="Injury Data")
+notebook.add(rostertab,text="Roster Data")
+
+# Sub frames
+perf_sub1 = Frame(perftab, borderwidth=1, relief="groove", bg="#16161d")
+perf_sub1.place(x=0,y=0,relwidth=1,relheight=1/4)
+Label(perf_sub1, text="Define Data Points", bg="#a2a2a5").pack(side="left")
+
+perf_sub2 = Frame(perftab, borderwidth=1, relief="groove", bg="#45454a")
+perf_sub2.place(relx=0,rely=1/4,relwidth=1,relheight=1/4)
+Label(perf_sub2, text="Granularity", bg="#a2a2a5").pack(side="left")
+
+perf_sub3 = Frame(perftab, borderwidth=1, relief="groove", bg="#16161d")
+perf_sub3.place(relx=0,rely=1/2,relwidth=1,relheight=1/4)
+Label(perf_sub3, text="Time Frame", bg="#a2a2a5").pack(side="left")
+
+perf_sub4 = Frame(perftab, borderwidth=1, relief="groove", bg="#45454a")
+perf_sub4.place(relx=0,rely=3/4,relwidth=1,relheight=1/4)
+Label(perf_sub4, text="Players", bg="#a2a2a5").pack(side="left")
+
+# Labels
+perf_std_label1 = Label(perf_sub1,
+              text="Passing | Rushing | Receiving | Misc.",
+              font=('Arial',spacer_unit, 'bold'),
+              fg='WHITE',
+              bg='#45454a',
+              bd=spacer_unit_small,
+              padx=spacer_unit_small,
+              pady=spacer_unit_small)
+
+perf_std_label1.place(relx=1/3,rely=1/4)
+
+perf_std_label2 = Label(perf_sub1,
+              text="Selected:",
+              font=('Arial',spacer_unit, 'bold'),
+              fg='WHITE',
+              bg='#45454a',
+              bd=spacer_unit_small,
+              padx=spacer_unit_small,
+              pady=spacer_unit_small)
+
+perf_std_label2.place(relx=2/3,rely=1/4)
+
+
+# Buttons
+get_data_button = Button(window, text='Get Data')
+
+get_data_button.config(command=click) # performs call back of function
+get_data_button.config(font=('Arial',spacer_unit,'bold'))
+get_data_button.config(bg='#737377')
+get_data_button.config(fg='WHITE')
+
+
+get_data_button.config(state=DISABLED) # disables button (ACTIVE/DISABLED)
+
+get_data_button.place(x=spacer_unit,y=(HEIGHT - 3*spacer_unit))
+
+# Radio Buttons Section 1
+radbutton_perf_data_standard = Radiobutton(perf_sub1,
+                                           text="Standard", #adds text to radiobuttons
+                                           variable=x, #groups radiobuttons together if they share the same variable
+                                           value=1,     #assigns each radiobutton a different value
+                                           padx = spacer_unit_small,
+                                           pady = spacer_unit_small,
+                                           bg="#737377",
+                                           command=what_data) 
+radbutton_perf_data_select = Radiobutton(perf_sub1,
+                                         text="Select",
+                                         variable=x,
+                                         value=2,
+                                         padx = spacer_unit_small,
+                                         pady = spacer_unit_small,
+                                         bg="#737377",
+                                         command=what_data)
+
+radbutton_perf_data_standard.place(relx=1/3,rely=0)
+radbutton_perf_data_select.place(relx=2/3,rely=0)
+
+# Radio Buttons Section 2
+radbutton_perf_gran_week = Radiobutton(perf_sub2,
+                                           text="By Week", #adds text to radiobuttons
+                                           variable=y, #groups radiobuttons together if they share the same variable
+                                           value=1,     #assigns each radiobutton a different value
+                                           padx = spacer_unit_small,
+                                           pady = spacer_unit_small,
+                                           bg="#737377",
+                                           command=data_gran) 
+radbutton_perf_gran_szn = Radiobutton(perf_sub2,
+                                         text="By Season",
+                                         variable=y,
+                                         value=2,
+                                         padx = spacer_unit_small,
+                                         pady = spacer_unit_small,
+                                         bg="#737377",
+                                         command=data_gran)
+radbutton_perf_gran_cum = Radiobutton(perf_sub2,
+                                         text="Cumulative",
+                                         variable=y,
+                                         value=3,
+                                         padx = spacer_unit_small,
+                                         pady = spacer_unit_small,
+                                         bg="#737377",
+                                         command=data_gran)
+
+radbutton_perf_gran_week.place(relx=1/4,rely=1/2)
+radbutton_perf_gran_szn.place(relx=1/2,rely=1/2)
+radbutton_perf_gran_cum.place(relx=3/4,rely=1/2)
+
+radbutton_perf_gran_week.config(state=DISABLED)
+radbutton_perf_gran_szn.config(state=DISABLED)
+radbutton_perf_gran_cum.config(state=DISABLED)
+
+# listboxes
+slct_data_listbox = Listbox(perf_sub1,
+                            bg="#45454a",
+                            font=('Arial',spacer_unit,'bold'),
+                            selectmode=MULTIPLE)
+slct_data_listbox.place(relx=5/6,rely=0)
+
+slct_data_listbox.insert(1,"Passing")
+slct_data_listbox.insert(2,"Rushing")
+slct_data_listbox.insert(3,"Receiving")
+slct_data_listbox.insert(4,"Misc.")
+
+slct_data_listbox.config(height=slct_data_listbox.size())
+
+slct_data_listbox.config(state=DISABLED)
+
+slct_dataButton = Button(perf_sub1, text="Submit", command=submitSlct)
+slct_dataButton.place(relx=5/6,rely=5/6)
+
+what_data()
+
+window.mainloop() # place window on computer screen, listen for events
