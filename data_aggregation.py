@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Jan 16 08:52:36 2025
+
+@author: nick_
+"""
+import nfl_data_py as nfl
 
 import os
 import logging
@@ -11,6 +18,7 @@ import pandas
 import appdirs
 from urllib.error import HTTPError
 import pickle
+
 
     
 # Functions
@@ -276,6 +284,86 @@ def import_weekly_pfr(s_type, years=None):
     
     return df[df.season.isin(years)] if years else df
 
+#Standard data def Passing | Rushing | Receiving | Misc.
+# Granularity = Weekly
+#Passing 
+#seasons = [2024]
+
+def get_weekly_passing_df(player_list, timeframe_dict):
+    
+    seasons = list(timeframe_dict.keys())
+    
+    name_col_basic_pfr = ('player_display_name','pfr_player_name')
+    
+    passing_cols_wk = ['player_display_name', 'position', 'recent_team', 'season', 'week', 'season_type', 'opponent_team', 'fantasy_points', 'fantasy_points_ppr', 'completions', 'attempts', 'passing_yards', 'passing_tds', 'interceptions', 'sacks', 'sack_yards', 'sack_fumbles', 'sack_fumbles_lost', 'passing_air_yards', 'passing_yards_after_catch', 'passing_first_downs', 'passing_epa', 'passing_2pt_conversions', 'pacr', 'dakota']
+    adv_passing_cols_wk = ['player_name', 'season', 'week', 'passing_drops', 'passing_drop_pct', 'passing_bad_throws', 'passing_bad_throw_pct', 'times_sacked', 'times_blitzed', 'times_hurried', 'times_hit', 'times_pressured', 'times_pressured_pct']
+    
+    passing_df_adv = import_weekly_pfr(s_type='pass',years=seasons)
+    
+    passing_df_adv.rename(columns={name_col_basic_pfr[1]: 'player_name'}, inplace=True)
+    
+    passing_df_adv = passing_df_adv[adv_passing_cols_wk]
+    
+    passing_df_adv = passing_df_adv.reset_index(drop=True)
+    player_loc = list(set(passing_df_adv['player_name'].tolist()))
+    
+    passing_df_basic = import_weekly_data(years=seasons,columns=passing_cols_wk)
+    
+    passing_df_basic = passing_df_basic.loc[passing_df_basic['player_display_name'].isin(player_loc)]
+    
+    passing_df_basic.rename(columns={name_col_basic_pfr[0]: 'player_name'}, inplace=True)
+    passing_df_basic = passing_df_basic.reset_index(drop=True)
+    
+    passing_df = pandas.merge(passing_df_basic, passing_df_adv, on=['player_name', 'season', 'week'], how='left')
+    passing_df = passing_df.loc[passing_df['player_name'].isin(player_list)]
+    
+    sub_df = pandas.DataFrame(columns=passing_df.columns.tolist())
+    if len(passing_df) > 0:
+        for key in timeframe_dict:
+            sub_df = pandas.concat([sub_df, passing_df.loc[(passing_df['season']==key) & (passing_df['week'].isin(timeframe_dict[key]))]], ignore_index=True)
+    
+    return sub_df
+
+def get_seasonal_passing_df(player_list, timeframe_list):
+    
+    seasons = timeframe_list
+    
+    passing_cols_ssn = ['player_id', 'season', 'season_type', 'completions', 'attempts', 'passing_yards', 'passing_tds', 'interceptions', 'sacks', 'sack_yards', 'sack_fumbles', 'sack_fumbles_lost', 'passing_air_yards', 'passing_yards_after_catch', 'passing_first_downs', 'passing_epa', 'passing_2pt_conversions', 'pacr', 'dakota', 'fantasy_points', 'fantasy_points_ppr', 'games']
+    adv_passing_cols_ssn = ['player', 'team', 'pass_attempts', 'throwaways', 'spikes', 'drops', 'drop_pct', 'bad_throws', 'bad_throw_pct', 'season', 'pocket_time', 'times_blitzed', 'times_hurried', 'times_hit', 'times_pressured', 'pressure_pct', 'batted_balls', 'on_tgt_throws', 'on_tgt_pct', 'rpo_plays', 'rpo_yards', 'rpo_pass_att', 'rpo_pass_yards', 'rpo_rush_att', 'rpo_rush_yards', 'pa_pass_att', 'pa_pass_yards']
+    
+    passing_df_adv = import_seasonal_pfr(s_type='pass',years=seasons)
+    passing_df_basic = import_seasonal_data(seasons)
+    
+    passing_df_adv.loc[passing_df_adv['pfr_id']=='MinsGa00', 'player'] = 'Gardner Minshew'
+    passing_df_adv.loc[passing_df_adv['pfr_id']=='PeniMi00', 'player'] = 'Michael Penix Jr.'
+    
+    passing_df_adv = passing_df_adv[adv_passing_cols_ssn]
+    passing_df_basic = passing_df_basic[passing_cols_ssn]
+    
+    with open("player_id.pkl", "rb") as f:
+        player_id = pickle.load(f)
+    
+    id_list = []
+    
+    for index, row in passing_df_adv.iterrows():
+        if row['player'] in player_id.keys():
+            id_list.append(player_id[row['player']])
+        else:
+            id_list.append('no_id')
+    passing_df_adv['player_id'] = id_list
+    passing_df_adv = passing_df_adv[passing_df_adv['player_id'] != 'no_id']
+    passing_df_adv.rename(columns={'player' : 'player_name'}, inplace=True)
+    passing_df_adv = passing_df_adv.reset_index(drop=True)
+    
+    player_loc = list(set(passing_df_adv['player_id'].tolist()))
+    passing_df_basic = passing_df_basic.loc[passing_df_basic['player_id'].isin(player_loc)]
+    passing_df_basic = passing_df_basic.reset_index(drop=True)
+    
+    passing_df = pandas.merge(passing_df_basic, passing_df_adv, on=['player_id', 'season'], how='left')
+    passing_df = passing_df.loc[passing_df['player_name'].isin(player_list)]
+    passing_df = passing_df.reindex(columns=['player_name', 'team', 'games', 'season', 'season_type', 'fantasy_points', 'fantasy_points_ppr', 'player_id', 'completions', 'attempts', 'passing_yards', 'passing_tds', 'interceptions', 'sacks', 'sack_yards', 'sack_fumbles', 'sack_fumbles_lost', 'passing_air_yards', 'passing_yards_after_catch', 'passing_first_downs', 'passing_epa', 'passing_2pt_conversions', 'pacr', 'dakota', 'pass_attempts', 'throwaways', 'spikes', 'drops', 'drop_pct', 'bad_throws', 'bad_throw_pct', 'pocket_time', 'times_blitzed', 'times_hurried', 'times_hit', 'times_pressured', 'pressure_pct', 'batted_balls', 'on_tgt_throws', 'on_tgt_pct', 'rpo_plays', 'rpo_yards', 'rpo_pass_att', 'rpo_pass_yards', 'rpo_rush_att', 'rpo_rush_yards', 'pa_pass_att', 'pa_pass_yards'])
+    return passing_df
+
 # Full function call
 def generate_df(players, data_def, granularity, timeframe):
     # players = list of player names
@@ -290,6 +378,11 @@ def generate_df(players, data_def, granularity, timeframe):
     player_names = players
     data_requested = data_def
     data_format = granularity
-    player = str(player_names[0])
-    data = str(data_requested[0])
-    return f"Dataframe: players {player} data type {data} granularity {data_format}"
+    if "Passing" in data_def:
+        if weekly and data_format == "Week":
+            df1 = get_weekly_passing_df(player_names, timeframe)
+        elif seasonal and data_format == "Season":
+            df1 = get_seasonal_passing_df(player_names, timeframe)
+    
+    return "hi"
+
