@@ -7,6 +7,9 @@ Created on Wed Jan 29 23:38:03 2025
 from tkinter import *
 from tkinter import ttk
 import pickle
+import pandas as pd
+import view_df
+import data_aggregation
 
 # windows = serves as a container to hold or contain these widgets
 # widgets = GUI elements: buttons, textboxes, labels, images
@@ -69,6 +72,7 @@ by_week_options = []
 by_season_options = []
 
 # Global Variables to determine output
+
 data_granularity = ""
 data_slct = []              #select data options
 dist_week_selections = []   #if dist_weeks_mode
@@ -146,7 +150,20 @@ def click():
         warn_label.config(text=error_txt)
     else:
         warn_label.config(text="")
-
+        
+        selected_player_states = (all_qbs, all_wrs, all_rbs, all_tes)
+        selected_players = data_aggregation.get_players(selected_player_states,dist_player_selections) #player list
+        
+        data_definition = data_aggregation.def_data_requested(what_data_std, what_data_slct, data_slct) #data requested
+        
+        if dist_szn_mode or start_end_szn_mode: # timeframe
+            season_list = data_aggregation.get_seasons(dist_szn_mode, start_end_szn_mode, start_szn, end_szn, dist_season_selections)
+            df = data_aggregation.generate_df(selected_players, data_definition, data_granularity, season_list)
+        elif start_end_wk_mode or dist_weeks_mode:
+            season_week_dict = data_aggregation.get_weeks(dist_weeks_mode, start_end_wk_mode, start_week, end_week, dist_week_selections)
+            df = data_aggregation.generate_df(selected_players, data_definition, data_granularity, season_week_dict)
+        print(df)
+        #view_df.display_data(WIDTH,HEIGHT,test_df)
 
 def what_data():
     global what_data_std
