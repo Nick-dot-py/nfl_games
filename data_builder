@@ -25,6 +25,7 @@ spacer_unit = round(WIDTH/100)
 spacer_unit_small = round(spacer_unit/6)
 
 selection_complete = False
+
 x = IntVar()
 y = IntVar()
 z = IntVar()
@@ -112,7 +113,40 @@ window.config(background="#d0d0d2")
 
 # Functions
 def click():
-    pass
+    error_txt = "Please Select "
+    if not any([all_qbs, all_wrs, all_rbs, all_tes]) and len(dist_player_selections) == 0:
+        error_txt += "Player(s)"
+        warn_label.config(text=error_txt)
+    elif not what_data_std and len(data_slct) == 0:
+        error_txt += "Standard or Select Data"
+        warn_label.config(text=error_txt)
+    elif data_granularity not in ["Week", "Season", "Cumulative"]:
+        error_txt += "Data Granularity"
+        warn_label.config(text=error_txt)
+    elif data_granularity in ["Week", "Season", "Cumulative"] and not any([dist_weeks_mode, dist_szn_mode, start_end_wk_mode, start_end_szn_mode]):
+        error_txt = "Please Choose Timeframe"
+        warn_label.config(text=error_txt)
+    elif dist_weeks_mode and len(dist_week_selections) == 0:
+        error_txt = "Please Add Weeks"
+        warn_label.config(text=error_txt)
+    elif dist_szn_mode and len(dist_season_selections) == 0:
+        error_txt = "Please Add Seasons"
+        warn_label.config(text=error_txt)
+    elif start_end_wk_mode and len(start_week) == 0:
+        error_txt = "Please Select Start Week"
+        warn_label.config(text=error_txt)
+    elif start_end_wk_mode and len(end_week) == 0:
+        error_txt = "Please Select End Week"
+        warn_label.config(text=error_txt)
+    elif start_end_szn_mode and len(start_szn) == 0:
+        error_txt = "Please Select Start Season"
+        warn_label.config(text=error_txt)
+    elif start_end_szn_mode and len(end_szn) == 0:
+        error_txt = "Please Select End Season"
+        warn_label.config(text=error_txt)
+    else:
+        warn_label.config(text="")
+
 
 def what_data():
     global what_data_std
@@ -192,6 +226,8 @@ def timeframeSlct():
         drop_week_end.config(state=DISABLED)
         add_dist_sznButton.config(state=DISABLED)
         rem_dist_sznButton.config(state=DISABLED)
+        drop_szn_end.config(value=[" "],state=DISABLED)
+        drop_szn_end.current(0)
     elif(z.get()==2):
         dist_szn_mode = True
         dist_weeks_mode = False
@@ -205,6 +241,8 @@ def timeframeSlct():
         drop_week_end.config(state=DISABLED)
         add_dist_weekButton.config(state=DISABLED)
         rem_dist_weekButton.config(state=DISABLED)
+        drop_week_end.config(value=[" "],state=DISABLED)
+        drop_week_end.current(0)
     elif(z.get()==3):
         start_end_wk_mode = True
         dist_weeks_mode = False
@@ -482,6 +520,8 @@ def rem_te():
         else:
             display_string += str(i)+" + "
     dist_player_label.config(text=display_string, fg="WHITE")
+    
+    
 # Window Tabs
 
 notebook = ttk.Notebook(window)         #widget that manages a colection of windows/displays
@@ -508,19 +548,19 @@ notebook.add(rostertab,text="Roster Data")
 
 # Sub frames
 perf_sub1 = Frame(perftab, borderwidth=1, relief="groove", bg="#16161d")
-perf_sub1.place(x=0,y=0,relwidth=1,relheight=1/4)
+perf_sub1.place(relx=0,rely=1/4,relwidth=1,relheight=1/4)
 Label(perf_sub1, text="Define Data Points", bg="#a2a2a5").pack(side="left")
 
 perf_sub2 = Frame(perftab, borderwidth=1, relief="groove", bg="#45454a")
-perf_sub2.place(relx=0,rely=1/4,relwidth=1,relheight=1/4)
+perf_sub2.place(relx=0,rely=1/2,relwidth=1,relheight=1/4)
 Label(perf_sub2, text="Granularity", bg="#a2a2a5").pack(side="left")
 
 perf_sub3 = Frame(perftab, borderwidth=1, relief="groove", bg="#16161d")
-perf_sub3.place(relx=0,rely=1/2,relwidth=1,relheight=1/4)
+perf_sub3.place(relx=0,rely=3/4,relwidth=1,relheight=1/4)
 Label(perf_sub3, text="Time Frame", bg="#a2a2a5").pack(side="left")
 
 perf_sub4 = Frame(perftab, borderwidth=1, relief="groove", bg="#45454a")
-perf_sub4.place(relx=0,rely=3/4,relwidth=1,relheight=1/4)
+perf_sub4.place(relx=0,rely=0,relwidth=1,relheight=1/4)
 Label(perf_sub4, text="Players", bg="#a2a2a5").pack(side="left")
 
 # Labels
@@ -533,7 +573,7 @@ perf_std_label1 = Label(perf_sub1,
               padx=spacer_unit_small,
               pady=spacer_unit_small)
 
-perf_std_label1.place(relx=1/3,rely=1/4)
+perf_std_label1.place(relx=1/5,rely=1/4)
 
 perf_std_label2 = Label(perf_sub1,
               text="Selected:",
@@ -544,7 +584,7 @@ perf_std_label2 = Label(perf_sub1,
               padx=spacer_unit_small,
               pady=spacer_unit_small)
 
-perf_std_label2.place(relx=2/3,rely=1/4)
+perf_std_label2.place(relx=1/2,rely=1/4)
 
 dist_label = Label(perf_sub3,
               text="Selected:",
@@ -556,6 +596,17 @@ dist_label = Label(perf_sub3,
               pady=spacer_unit_small)
 
 dist_label.place(relx=1/12,rely=0)
+
+warn_label = Label(perf_sub3,
+              text="",
+              font=('Arial',round(2*spacer_unit/3), 'bold'),
+              fg='#a2a2a5',
+              bg='#16161d',
+              bd=spacer_unit_small,
+              padx=spacer_unit_small,
+              pady=spacer_unit_small)
+
+warn_label.place(relx=0,rely=3/4)
 
 players_label1 = Label(perf_sub4,
               text="QBs",
@@ -609,6 +660,7 @@ dist_player_label = Label(perf_sub4,
 
 dist_player_label.place(relx=1/12,rely=0)
 
+
 # Buttons
 get_data_button = Button(window, text='Get Data')
 
@@ -618,12 +670,12 @@ get_data_button.config(bg='#737377')
 get_data_button.config(fg='WHITE')
 
 
-get_data_button.config(state=DISABLED) # disables button (ACTIVE/DISABLED)
+#get_data_button.config(state=DISABLED) # disables button (ACTIVE/DISABLED)
 
 get_data_button.place(x=spacer_unit,y=(HEIGHT - 3*spacer_unit))
 
 slct_dataButton = Button(perf_sub1, text="Submit", command=submitSlct)
-slct_dataButton.place(relx=5/6,rely=5/6)
+slct_dataButton.place(relx=2/3,rely=5/6)
 slct_dataButton.config(state=DISABLED)
 
 add_dist_weekButton = Button(perf_sub3, text="Add...", command=add_week)
@@ -692,8 +744,8 @@ radbutton_perf_data_select = Radiobutton(perf_sub1,
                                          bg="#737377",
                                          command=what_data)
 
-radbutton_perf_data_standard.place(relx=1/3,rely=0)
-radbutton_perf_data_select.place(relx=2/3,rely=0)
+radbutton_perf_data_standard.place(relx=1/5,rely=0)
+radbutton_perf_data_select.place(relx=1/2,rely=0)
 
 # Radio Buttons Section 2
 radbutton_perf_gran_week = Radiobutton(perf_sub2,
@@ -789,7 +841,7 @@ slct_data_listbox = Listbox(perf_sub1,
                             bg="#45454a",
                             font=('Arial',spacer_unit,'bold'),
                             selectmode=MULTIPLE)
-slct_data_listbox.place(relx=5/6,rely=0)
+slct_data_listbox.place(relx=2/3,rely=0)
 
 slct_data_listbox.insert(1,"Passing")
 slct_data_listbox.insert(2,"Rushing")
