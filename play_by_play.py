@@ -155,9 +155,9 @@ class Series:
             self.index1 += 1
     def build_rect(self, win, series_rect):
         if len(self.cells) > 0:
-            self.width = min((series_rect.width/len(self.cells)) - 2, series_rect.width/4)
+            self.width = min((series_rect.width/len(self.cells)), series_rect.width/4)
             for i in range(len(self.cells)):
-                self.rects.append(pygame.Rect(series_rect.left + i*self.width + 2, series_rect.top + 2, self.width, series_rect.height))
+                self.rects.append(pygame.Rect(series_rect.left + i*self.width, series_rect.top + 2, self.width, series_rect.height))
             for i in self.rects:
                 pygame.draw.rect(win, WHITE, i, 2, 1)
             for key, value in self.cells.items():
@@ -926,6 +926,12 @@ def game(df):
                         contested = df['is_contested_ball'][play]
                         dropped = df['is_drop'][play]
                         blitzers = df['n_blitzers'][play]
+                    else:
+                        catchable = False
+                        contested = False
+                        dropped = False
+                        screen_pass = False
+                        interception_possible = False
                 else:
                     play_action = False
                     run_pass_option = False
