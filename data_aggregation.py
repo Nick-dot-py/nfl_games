@@ -406,6 +406,8 @@ def get_seasonal_passing_df(player_list, timeframe_list):
     
     seasons = timeframe_list
     
+    player_list_T = [transform_name(x) for x in player_list]
+    
     passing_cols_ssn = ['player_id', 'season', 'season_type', 'fantasy_points', 'fantasy_points_ppr', 'games', 'completions', 'attempts', 'passing_yards', 'passing_tds', 'interceptions', 'sacks', 'sack_yards', 'sack_fumbles', 'sack_fumbles_lost', 'passing_air_yards', 'passing_yards_after_catch', 'passing_first_downs', 'passing_epa', 'passing_2pt_conversions', 'pacr', 'dakota']
     adv_passing_cols_ssn = ['player', 'team', 'pass_attempts', 'throwaways', 'spikes', 'drops', 'drop_pct', 'bad_throws', 'bad_throw_pct', 'season', 'pocket_time', 'times_blitzed', 'times_hurried', 'times_hit', 'times_pressured', 'pressure_pct', 'batted_balls', 'on_tgt_throws', 'on_tgt_pct', 'rpo_plays', 'rpo_yards', 'rpo_pass_att', 'rpo_pass_yards', 'rpo_rush_att', 'rpo_rush_yards', 'pa_pass_att', 'pa_pass_yards']
     
@@ -421,14 +423,23 @@ def get_seasonal_passing_df(player_list, timeframe_list):
     with open("player_id.pkl", "rb") as f:
         player_id = pickle.load(f)
     
+    with open("player_id_T.pkl", "rb") as f:
+        player_id_T = pickle.load(f)
+        
     id_list = []
-    
+    alt_name = []
     for index, row in passing_df_adv.iterrows():
+        alt_name.append(transform_name(row['player']))
         if row['player'] in player_id.keys():
             id_list.append(player_id[row['player']])
+        elif transform_name(row['player']) in player_id_T.keys():
+            id_list.append(player_id_T[transform_name(row['player'])])
         else:
             id_list.append('no_id')
+        
     passing_df_adv['player_id'] = id_list
+    passing_df_adv['name_alt'] = alt_name
+    
     passing_df_adv = passing_df_adv[passing_df_adv['player_id'] != 'no_id']
     passing_df_adv.rename(columns={'player' : 'player_name'}, inplace=True)
     passing_df_adv = passing_df_adv.reset_index(drop=True)
@@ -438,12 +449,15 @@ def get_seasonal_passing_df(player_list, timeframe_list):
     passing_df_basic = passing_df_basic.reset_index(drop=True)
     
     passing_df = pandas.merge(passing_df_basic, passing_df_adv, on=['player_id', 'season'], how='left')
-    passing_df = passing_df.loc[passing_df['player_name'].isin(player_list)]
+    passing_df = passing_df.loc[(passing_df['player_name'].isin(player_list)) | (passing_df['name_alt'].isin(player_list_T))]
+    passing_df.drop('name_alt', axis=1, inplace=True)
     passing_df = passing_df.reindex(columns=['player_name', 'team', 'games', 'season', 'season_type', 'fantasy_points', 'fantasy_points_ppr', 'player_id', 'completions', 'attempts', 'passing_yards', 'passing_tds', 'interceptions', 'sacks', 'sack_yards', 'sack_fumbles', 'sack_fumbles_lost', 'passing_air_yards', 'passing_yards_after_catch', 'passing_first_downs', 'passing_epa', 'passing_2pt_conversions', 'pacr', 'dakota', 'pass_attempts', 'throwaways', 'spikes', 'drops', 'drop_pct', 'bad_throws', 'bad_throw_pct', 'pocket_time', 'times_blitzed', 'times_hurried', 'times_hit', 'times_pressured', 'pressure_pct', 'batted_balls', 'on_tgt_throws', 'on_tgt_pct', 'rpo_plays', 'rpo_yards', 'rpo_pass_att', 'rpo_pass_yards', 'rpo_rush_att', 'rpo_rush_yards', 'pa_pass_att', 'pa_pass_yards'])
     return passing_df
 
 def get_seasonal_rushing_df(player_list, timeframe_list):
     seasons = timeframe_list
+    
+    player_list_T = [transform_name(x) for x in player_list]
     
     rushing_cols_ssn = ['player_id', 'season', 'season_type', 'games', 'fantasy_points', 'fantasy_points_ppr', 'carries', 'rushing_yards', 'rushing_tds', 'rushing_fumbles', 'rushing_fumbles_lost', 'rushing_first_downs', 'rushing_epa', 'rushing_2pt_conversions']
     adv_rushing_cols_ssn = ['player', 'season', 'tm', 'age', 'pos', 'att', 'ybc', 'ybc_att', 'yac', 'yac_att', 'brk_tkl', 'att_br']
@@ -457,17 +471,24 @@ def get_seasonal_rushing_df(player_list, timeframe_list):
     with open("player_id.pkl", "rb") as f:
         player_id = pickle.load(f)
     
-    id_list = []
+    with open("player_id_T.pkl", "rb") as f:
+        player_id_T = pickle.load(f)
     
+    id_list = []
+    alt_name = []
     for index, row in rushing_df_adv.iterrows():
+        alt_name.append(transform_name(row['player']))
         if row['player'] in player_id.keys():
             id_list.append(player_id[row['player']])
+        elif transform_name(row['player']) in player_id_T.keys():
+            id_list.append(player_id_T[transform_name(row['player'])])
         else:
             id_list.append('no_id')
             
     rushing_df_adv['player_id'] = id_list
+    rushing_df_adv['name_alt'] = alt_name
     rushing_df_adv = rushing_df_adv[rushing_df_adv['player_id'] != 'no_id']
-    rushing_df_adv.rename(columns={'player' : 'player_name', 'tm' : 'team', 'ybc_att' : 'ybc_per_att', 'yac_att' : 'yac_per_att', 'att_br' : 'brk_tkl_per_att'}, inplace=True)
+    rushing_df_adv.rename(columns={'player' : 'player_name', 'tm' : 'team', 'ybc_att' : 'ybc_per_att', 'yac_att' : 'yac_per_att', 'att_br' : 'carry_per_brk_tkl'}, inplace=True)
     rushing_df_adv = rushing_df_adv.reset_index(drop=True)
     
     player_loc = list(set(rushing_df_adv['player_id'].tolist()))
@@ -475,8 +496,9 @@ def get_seasonal_rushing_df(player_list, timeframe_list):
     rushing_df_basic = rushing_df_basic.reset_index(drop=True)
     
     rushing_df = pandas.merge(rushing_df_basic, rushing_df_adv, on=['player_id', 'season'], how='left')
-    rushing_df = rushing_df.loc[rushing_df['player_name'].isin(player_list)]
-    rushing_df = rushing_df.reindex(columns=['player_name', 'team', 'age', 'pos', 'player_id', 'season', 'season_type', 'games', 'fantasy_points', 'fantasy_points_ppr', 'carries', 'rushing_yards', 'rushing_tds', 'rushing_fumbles', 'rushing_fumbles_lost', 'rushing_first_downs', 'rushing_epa', 'rushing_2pt_conversions', 'att', 'ybc', 'ybc_per_att', 'yac', 'yac_per_att', 'brk_tkl', 'brk_tkl_per_att'])
+    rushing_df = rushing_df.loc[(rushing_df['player_name'].isin(player_list)) | (rushing_df['name_alt'].isin(player_list_T))]
+    rushing_df.drop('name_alt', axis=1, inplace=True)
+    rushing_df = rushing_df.reindex(columns=['player_name', 'team', 'age', 'pos', 'player_id', 'season', 'season_type', 'games', 'fantasy_points', 'fantasy_points_ppr', 'carries', 'rushing_yards', 'rushing_tds', 'rushing_fumbles', 'rushing_fumbles_lost', 'rushing_first_downs', 'rushing_epa', 'rushing_2pt_conversions', 'att', 'ybc', 'ybc_per_att', 'yac', 'yac_per_att', 'brk_tkl', 'carry_per_brk_tkl'])
     return rushing_df
 
 def get_seasonal_rec_df(player_list, timeframe_list):
@@ -484,7 +506,7 @@ def get_seasonal_rec_df(player_list, timeframe_list):
     
     player_list_T = [transform_name(x) for x in player_list]
     
-    rec_cols_ssn = ['player_id', 'season', 'season_type', 'games', 'fantasy_points', 'fantasy_points_ppr', 'receptions', 'targets', 'receiving_yards', 'receiving_tds', 'receiving_fumbles', 'receiving_fumbles_lost', 'receiving_air_yards', 'receiving_yards_after_catch', 'receiving_first_downs', 'receiving_epa', 'receiving_2pt_conversions', 'racr', 'target_share', 'air_yards_share', 'wopr_x']
+    rec_cols_ssn = ['player_id', 'season', 'season_type', 'games', 'fantasy_points', 'fantasy_points_ppr', 'receptions', 'targets', 'receiving_yards', 'receiving_tds', 'receiving_fumbles', 'receiving_fumbles_lost', 'receiving_air_yards', 'receiving_yards_after_catch', 'receiving_first_downs', 'receiving_epa', 'receiving_2pt_conversions', 'racr', 'tgt_sh', 'ay_sh', 'wopr_y',]
     adv_rec_cols_ssn = ['player', 'season',  'tm', 'age', 'pos', 'ybc', 'ybc_r', 'yac', 'yac_r', 'adot', 'brk_tkl', 'rec_br', 'drop', 'drop_percent', 'int']
     
     rec_df_adv = import_seasonal_pfr(s_type='rec',years=seasons)
@@ -516,7 +538,7 @@ def get_seasonal_rec_df(player_list, timeframe_list):
     rec_df_adv.rename(columns={'player' : 'player_name', 'tm' : 'team', 'pos' : 'position', 'ybc' : 'ybcatch', 'ybc_r' : 'ybcatch_per_rec', 'yac' : 'yacatch', 'yac_r' : 'yacatch_per_rec', 'rec_br' : 'rec_per_brk_tkl'}, inplace=True)
     rec_df_adv = rec_df_adv.reset_index(drop=True)
     
-    rec_df_basic.rename(columns={'wopr_x' : 'wopr'}, inplace=True)
+    rec_df_basic.rename(columns={'tgt_sh' : 'target_share', 'ay_sh' : 'air_yards_share', 'wopr_y' : 'wopr'}, inplace=True)
     
     player_loc = list(set(rec_df_adv['player_id'].tolist()))
     rec_df_basic = rec_df_basic.loc[rec_df_basic['player_id'].isin(player_loc)]
@@ -584,10 +606,86 @@ def get_cumulative_weekly_passing_df(player_list, timeframe_dict):
     return sum_df
 
 def get_cumulative_weekly_rushing_df(player_list, timeframe_dict):
-    pass
+    df_weekly = get_weekly_rushing_df(player_list, timeframe_dict)
+    df_weekly = df_weekly[['player_name', 'position', 'fantasy_points', 'fantasy_points_ppr', 'carries', 'rushing_yards', 'rushing_tds', 'rushing_fumbles', 'rushing_fumbles_lost', 'rushing_first_downs', 'rushing_epa', 'rushing_2pt_conversions', 'rushing_yards_before_contact', 'rushing_yards_before_contact_avg', 'rushing_yards_after_contact', 'rushing_yards_after_contact_avg', 'rushing_broken_tackles']]
+    player_names = list(set(df_weekly['player_name'].tolist()))
+    
+    sum_df = pandas.DataFrame(columns=['player_name', 'position', 'games','fantasy_points', 'fantasy_points_ppr', 'carries', 'rushing_yards', 'rushing_tds', 'rushing_fumbles', 'rushing_fumbles_lost', 'rushing_first_downs', 'rushing_epa_avg', 'rushing_2pt_conversions', 'rushing_yards_before_contact', 'rushing_yards_before_contact_avg', 'rushing_yards_after_contact', 'rushing_yards_after_contact_avg', 'rushing_broken_tackles'])
+    for i in player_names:
+        df_weekly_sub = df_weekly.loc[df_weekly['player_name']==i]
+        df_weekly_sub.reset_index(inplace=True)
+        player = i
+        position = df_weekly_sub['position'][0]
+        games = len(df_weekly_sub)
+        fantasy_points = df_weekly_sub['fantasy_points'].sum()
+        fantasy_points_ppr = df_weekly_sub['fantasy_points_ppr'].sum()
+        carries = df_weekly_sub['carries'].sum()
+        rushing_yards = df_weekly_sub['rushing_yards'].sum()
+        rushing_tds = df_weekly_sub['rushing_tds'].sum()
+        rushing_fumbles = df_weekly_sub['rushing_fumbles'].sum()
+        rushing_fumbles_lost = df_weekly_sub['rushing_fumbles_lost'].sum()
+        rushing_first_downs = df_weekly_sub['rushing_first_downs'].sum()
+        rushing_2pt_conversions = df_weekly_sub['rushing_2pt_conversions'].sum()
+        rushing_yards_before_contact = df_weekly_sub['rushing_yards_before_contact'].sum()
+        rushing_yards_after_contact = df_weekly_sub['rushing_yards_after_contact'].sum()
+        rushing_broken_tackles = df_weekly_sub['rushing_broken_tackles'].sum()
+        
+        rushing_epa_avg = df_weekly_sub['rushing_epa'].mean()
+     
+        rushing_yards_before_contact_avg = rushing_yards_before_contact/carries
+        rushing_yards_after_contact_avg = rushing_yards_after_contact/carries
+        new_row = pandas.DataFrame({'player_name' : [player], 'position' : [position], 'games' : [games], 'fantasy_points' : [fantasy_points], 'fantasy_points_ppr' : [fantasy_points_ppr], 'carries' : [carries], 'rushing_yards' : [rushing_yards], 'rushing_tds' : [rushing_tds], 'rushing_fumbles' : [rushing_fumbles], 'rushing_fumbles_lost' : [rushing_fumbles_lost], 'rushing_first_downs' : [rushing_first_downs], 'rushing_epa_avg' : [rushing_epa_avg], 'rushing_2pt_conversions' : [rushing_2pt_conversions], 'rushing_yards_before_contact' : [rushing_yards_before_contact], 'rushing_yards_before_contact_avg' : [rushing_yards_before_contact_avg], 'rushing_yards_after_contact' : [rushing_yards_after_contact], 'rushing_yards_after_contact_avg' : [rushing_yards_after_contact_avg], 'rushing_broken_tackles' : [rushing_broken_tackles]})
+        sum_df = pandas.concat([sum_df, new_row], ignore_index=True)
+    return sum_df
 
 def get_cumulative_weekly_receiving_df(player_list, timeframe_dict):
-    pass
+    df_weekly = get_weekly_receiving_df(player_list, timeframe_dict)
+    df_weekly = df_weekly[['player_name', 'position', 'fantasy_points', 'fantasy_points_ppr', 'receptions', 'targets', 'receiving_yards', 'receiving_tds', 'receiving_fumbles', 'receiving_fumbles_lost', 'receiving_air_yards', 'receiving_yards_after_catch', 'receiving_first_downs', 'receiving_epa', 'receiving_2pt_conversions', 'racr', 'target_share', 'air_yards_share', 'wopr', 'receiving_broken_tackles', 'receiving_drop', 'receiving_drop_pct', 'receiving_int', 'receiving_rat', 'adot']]
+    player_names = list(set(df_weekly['player_name'].tolist()))
+    
+    df_weekly['tgt_sh_numer'] = df_weekly['targets'] / df_weekly['target_share']
+    df_weekly['ay_sh_numer'] = df_weekly['receiving_air_yards'] / df_weekly['air_yards_share']
+    
+    sum_df = pandas.DataFrame(columns=['player_name', 'position', 'games','fantasy_points', 'fantasy_points_ppr', 'receptions', 'targets', 'receiving_yards', 'receiving_tds', 'receiving_fumbles', 'receiving_fumbles_lost', 'receiving_air_yards', 'receiving_yards_after_catch', 'receiving_first_downs', 'receiving_epa_avg', 'receiving_2pt_conversions', 'racr', 'target_share', 'air_yards_share', 'wopr', 'receiving_broken_tackles', 'receiving_drop', 'receiving_drop_pct', 'receiving_int', 'receiving_rat_avg', 'adot'])
+    for i in player_names:
+        df_weekly_sub = df_weekly.loc[df_weekly['player_name']==i]
+        df_weekly_sub.reset_index(inplace=True)
+        player = i
+        position = df_weekly_sub['position'][0]
+        games = len(df_weekly_sub)
+        fantasy_points = df_weekly_sub['fantasy_points'].sum()
+        fantasy_points_ppr = df_weekly_sub['fantasy_points_ppr'].sum()
+        receptions = df_weekly_sub['receptions'].sum()
+        targets = df_weekly_sub['targets'].sum()
+        receiving_yards = df_weekly_sub['receiving_yards'].sum()
+        receiving_tds = df_weekly_sub['receiving_tds'].sum()
+        receiving_fumbles = df_weekly_sub['receiving_fumbles'].sum()
+        receiving_fumbles_lost = df_weekly_sub['receiving_fumbles_lost'].sum()
+        receiving_air_yards = df_weekly_sub['receiving_air_yards'].sum()
+        receiving_yards_after_catch = df_weekly_sub['receiving_yards_after_catch'].sum()
+        receiving_first_downs = df_weekly_sub['receiving_first_downs'].sum()
+        receiving_2pt_conversions = df_weekly_sub['receiving_2pt_conversions'].sum()
+        receiving_broken_tackles = df_weekly_sub['receiving_broken_tackles'].sum()
+        receiving_drop = df_weekly_sub['receiving_drop'].sum()
+        receiving_drop_pct = df_weekly_sub['receiving_drop_pct'].sum()
+        receiving_int = df_weekly_sub['receiving_int'].sum()
+        
+        tgt_sh_numer = df_weekly_sub['tgt_sh_numer'].sum()
+        ay_sh_numer = df_weekly_sub['ay_sh_numer'].sum()
+        
+        target_share = targets/tgt_sh_numer
+        air_yards_share = receiving_air_yards/ay_sh_numer
+        
+        receiving_rat_avg = df_weekly_sub['receiving_rat'].mean()
+        receiving_epa_avg = df_weekly_sub['receiving_epa'].mean()
+        
+        racr = receiving_yards/receiving_air_yards
+        wopr = (1.5*target_share) + (0.7*air_yards_share)
+        adot = receiving_air_yards / targets
+        new_row = pandas.DataFrame({'player_name' : [player], 'position' : [position], 'games' : [games], 'fantasy_points' : [fantasy_points], 'fantasy_points_ppr' : [fantasy_points_ppr], 'receptions' : [receptions], 'targets' : [targets], 'receiving_yards' : [receiving_yards], 'receiving_tds' : [receiving_tds], 'receiving_fumbles' : [receiving_fumbles], 'receiving_fumbles_lost' : [receiving_fumbles_lost], 'receiving_air_yards' : [receiving_air_yards], 'receiving_yards_after_catch' : [receiving_yards_after_catch], 'receiving_first_downs' : [receiving_first_downs], 'receiving_epa_avg' : [receiving_epa_avg], 'receiving_2pt_conversions' : [receiving_2pt_conversions], 'racr' : [racr], 'target_share' : [target_share], 'air_yards_share' : [air_yards_share], 'wopr' : [wopr], 'receiving_broken_tackles' : [receiving_broken_tackles], 'receiving_drop' : [receiving_drop], 'receiving_drop_pct' : [receiving_drop_pct], 'receiving_int' : [receiving_int], 'receiving_rat_avg' : [receiving_rat_avg], 'adot' : [adot]})
+        sum_df = pandas.concat([sum_df, new_row], ignore_index=True)
+
+    return sum_df
 
 def get_cumulative_seasonal_passing_df(player_list, timeframe_list):
     df_seasonal = get_seasonal_passing_df(player_list, timeframe_list)
@@ -718,6 +816,92 @@ def get_cumulative_seasonal_passing_df(player_list, timeframe_list):
             
     return sum_df
 
+def get_cumulative_seasonal_rushing_df(player_list, timeframe_list):
+    df_seasonal = get_seasonal_rushing_df(player_list, timeframe_list)
+    df_seasonal = df_seasonal[['player_name', 'pos', 'games', 'fantasy_points', 'fantasy_points_ppr', 'carries', 'rushing_yards', 'rushing_tds', 'rushing_fumbles', 'rushing_fumbles_lost', 'rushing_first_downs', 'rushing_epa', 'rushing_2pt_conversions', 'ybc', 'yac', 'brk_tkl']]
+    player_names = list(set(df_seasonal['player_name'].tolist()))
+    
+    sum_df = pandas.DataFrame(columns=['player_name', 'position', 'games', 'fantasy_points', 'fantasy_points_ppr', 'carries', 'rushing_yards', 'rushing_tds', 'rushing_fumbles', 'rushing_fumbles_lost', 'rushing_first_downs', 'rushing_epa_avg', 'rushing_2pt_conversions', 'ybc', 'ybc_per_att', 'yac', 'yac_per_att', 'brk_tkl', 'carry_per_brk_tkl'])
+    for i in player_names:
+            df_season_sub = df_seasonal.loc[df_seasonal['player_name']==i]
+            df_season_sub.reset_index(inplace=True)
+            position = df_season_sub['pos'][0]
+            player = i
+            games = df_season_sub['games'].sum()
+            fantasy_points = df_season_sub['fantasy_points'].sum()
+            fantasy_points_ppr = df_season_sub['fantasy_points_ppr'].sum()
+            carries = df_season_sub['carries'].sum()
+            rushing_yards = df_season_sub['rushing_yards'].sum()
+            rushing_tds = df_season_sub['rushing_tds'].sum()
+            rushing_fumbles = df_season_sub['rushing_fumbles'].sum()
+            rushing_fumbles_lost = df_season_sub['rushing_fumbles_lost'].sum()
+            rushing_first_downs = df_season_sub['rushing_first_downs'].sum()
+            rushing_epa_avg = df_season_sub['rushing_epa'].mean()/games
+            rushing_2pt_conversions = df_season_sub['rushing_2pt_conversions'].sum()
+            ybc = df_season_sub['ybc'].sum()
+            ybc_per_att = ybc/carries
+            yac = df_season_sub['yac'].sum()
+            yac_per_att = yac/carries
+            brk_tkl = df_season_sub['brk_tkl'].sum()
+            carry_per_brk_tkl = carries/brk_tkl
+            
+            new_row = pandas.DataFrame({'player_name' : [player], 'position' : [position], 'games' : [games], 'fantasy_points' : [fantasy_points], 'fantasy_points_ppr' : [fantasy_points_ppr], 'carries' : [carries], 'rushing_yards' : [rushing_yards], 'rushing_tds' : [rushing_tds], 'rushing_fumbles' : [rushing_fumbles], 'rushing_fumbles_lost' : [rushing_fumbles_lost], 'rushing_first_downs' : [rushing_first_downs], 'rushing_epa_avg' : [rushing_epa_avg], 'rushing_2pt_conversions' : [rushing_2pt_conversions], 'ybc' : [ybc], 'ybc_per_att' : [ybc_per_att], 'yac' : [yac], 'yac_per_att' : [yac_per_att], 'brk_tkl' : [brk_tkl], 'carry_per_brk_tkl' : [carry_per_brk_tkl]})
+            sum_df = pandas.concat([sum_df, new_row], ignore_index=True)
+    return sum_df
+
+def get_cumulative_seasonal_receiving_df(player_list, timeframe_list):
+    df_seasonal = get_seasonal_rec_df(player_list, timeframe_list)
+    df_seasonal = df_seasonal[['player_name', 'position', 'games', 'fantasy_points', 'fantasy_points_ppr', 'receptions', 'targets', 'receiving_yards', 'receiving_tds', 'receiving_fumbles', 'receiving_fumbles_lost', 'receiving_air_yards', 'receiving_yards_after_catch', 'receiving_first_downs', 'receiving_epa', 'receiving_2pt_conversions', 'racr', 'target_share', 'air_yards_share', 'wopr', 'ybcatch', 'ybcatch_per_rec', 'yacatch', 'yacatch_per_rec', 'adot', 'brk_tkl', 'rec_per_brk_tkl', 'drop', 'drop_percent', 'int']]
+    player_names = list(set(df_seasonal['player_name'].tolist()))
+    
+    df_seasonal['total_tgt'] = df_seasonal['targets']/df_seasonal['target_share']
+    df_seasonal['total_ay'] = df_seasonal['receiving_air_yards']/df_seasonal['air_yards_share']
+
+    
+    sum_df = pandas.DataFrame(columns=['player', 'position', 'games', 'fantasy_points', 'fantasy_points_ppr', 'receptions', 'targets', 'receiving_yards', 'receiving_tds', 'receiving_fumbles', 'receiving_fumbles_lost', 'receiving_air_yards', 'receiving_yards_after_catch', 'receiving_first_downs', 'receiving_epa_avg', 'receiving_2pt_conversions', 'racr', 'target_share', 'air_yards_share', 'wopr', 'ybcatch', 'ybcatch_per_rec', 'yacatch', 'yacatch_per_rec', 'adot', 'brk_tkl', 'rec_per_brk_tkl', 'drop', 'drop_percent', 'interceptions'])
+    for i in player_names:
+            df_season_sub = df_seasonal.loc[df_seasonal['player_name']==i]
+            df_season_sub.reset_index(inplace=True)
+            position = df_season_sub['position'][0]
+            player = i
+            games = df_season_sub['games'].sum()
+            fantasy_points = df_season_sub['fantasy_points'].sum()
+            fantasy_points_ppr = df_season_sub['fantasy_points_ppr'].sum()
+            receptions = df_season_sub['receptions'].sum()
+            targets = df_season_sub['targets'].sum()
+            receiving_yards = df_season_sub['receiving_yards'].sum()
+            receiving_tds = df_season_sub['receiving_tds'].sum()
+            receiving_fumbles = df_season_sub['receiving_fumbles'].sum()
+            receiving_fumbles_lost = df_season_sub['receiving_fumbles_lost'].sum()
+            receiving_air_yards = df_season_sub['receiving_air_yards'].sum()
+            receiving_yards_after_catch = df_season_sub['receiving_yards_after_catch'].sum()
+            receiving_first_downs = df_season_sub['receiving_first_downs'].sum()
+            receiving_2pt_conversions = df_season_sub['receiving_2pt_conversions'].sum()
+            ybcatch = df_season_sub['ybcatch'].sum()
+            yacatch = df_season_sub['yacatch'].sum()
+            brk_tkl = df_season_sub['brk_tkl'].sum()
+            drop = df_season_sub['drop'].sum()
+            interceptions = df_season_sub['int'].sum()
+            
+            total_tgt = df_seasonal['total_tgt'].sum()
+            total_ay = df_seasonal['total_ay'].sum()
+            
+            target_share = targets/total_tgt
+            air_yards_share = receiving_air_yards/total_ay
+            
+            drop_percent = drop/targets
+            receiving_epa_avg = df_seasonal['receiving_epa'].mean()/games
+            racr = receiving_yards/receiving_air_yards
+            wopr = (1.5*target_share) + (0.7*air_yards_share)
+            ybcatch_per_rec = ybcatch/receptions
+            yacatch_per_rec = yacatch/receptions
+            adot = receiving_air_yards/targets
+            rec_per_brk_tkl = receptions/brk_tkl
+
+            new_row = pandas.DataFrame({'player' : [player], 'position' : [position], 'games' : [games], 'fantasy_points' : [fantasy_points], 'fantasy_points_ppr' : [fantasy_points_ppr], 'receptions' : [receptions], 'targets' : [targets], 'receiving_yards' : [receiving_yards], 'receiving_tds' : [receiving_tds], 'receiving_fumbles' : [receiving_fumbles], 'receiving_fumbles_lost' : [receiving_fumbles_lost], 'receiving_air_yards' : [receiving_air_yards], 'receiving_yards_after_catch' : [receiving_yards_after_catch], 'receiving_first_downs' : [receiving_first_downs], 'receiving_epa_avg' : [receiving_epa_avg], 'receiving_2pt_conversions' : [receiving_2pt_conversions], 'racr' : [racr], 'target_share' : [target_share], 'air_yards_share' : [air_yards_share], 'wopr' : [wopr], 'ybcatch' : [ybcatch], 'ybcatch_per_rec' : [ybcatch_per_rec], 'yacatch' : [yacatch], 'yacatch_per_rec' : [yacatch_per_rec], 'adot' : [adot], 'brk_tkl' : [brk_tkl], 'rec_per_brk_tkl' : [rec_per_brk_tkl], 'drop' : [drop], 'drop_percent' : [drop_percent], 'interceptions' : [interceptions]})
+            sum_df = pandas.concat([sum_df, new_row], ignore_index=True)
+    return sum_df
+
 # Full function call
 def generate_df(players, data_def, granularity, timeframe):
     # players = list of player names
@@ -753,9 +937,9 @@ def generate_df(players, data_def, granularity, timeframe):
         elif seasonal and data_format == "Season":
             df2 = get_seasonal_rushing_df(player_names, timeframe)
         elif weekly and data_format == 'Cumulative':
-            pass
+            df2 = get_cumulative_weekly_rushing_df(player_names, timeframe)
         elif seasonal and data_format == 'Cumulative':
-            pass
+            df2 = get_cumulative_seasonal_rushing_df(player_names, timeframe)
 
     if "Receiving" in data_def:
         receiving = True
@@ -764,9 +948,9 @@ def generate_df(players, data_def, granularity, timeframe):
         elif seasonal and data_format == "Season":
             df3 = get_seasonal_rec_df(player_names, timeframe)
         elif weekly and data_format == 'Cumulative':
-            pass
+            df3 = get_cumulative_weekly_receiving_df(player_names, timeframe)
         elif seasonal and data_format == 'Cumulative':
-            pass
+            df3 = get_cumulative_seasonal_receiving_df(player_names, timeframe)
 
     if "Misc." in data_def:
         misc = True
@@ -780,4 +964,3 @@ def generate_df(players, data_def, granularity, timeframe):
             pass
 
     return df1
-
