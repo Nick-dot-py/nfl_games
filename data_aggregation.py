@@ -11,15 +11,17 @@ import datetime
 from warnings import warn
 from typing import Iterable
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
+import numpy as np
 import numpy
 import pandas
 import appdirs
 from urllib.error import HTTPError
 import pickle
+import time
 
 
-    
+start_time = time.perf_counter()
+
 # Functions
 
 def get_players(all_player_states=tuple, dist_players=list):
@@ -86,7 +88,7 @@ def get_weeks(dist=bool, start_end=bool,start_wk=str, end_wk=str, selections=lis
 
 def transform_name(name):
     substring1 = " Jr."
-    substring2 = "'"
+
     substring3 = "."
     name_T = name.replace(substring1, "")
     name_T = name_T.replace("'", "")
@@ -163,6 +165,9 @@ def import_weekly_data(
 
     return data
 
+def remove_strings(list1, list2):
+    """Removes strings found in list2 from list1."""
+    return [item for item in list1 if item not in list2]
 
 def import_seasonal_data(years, s_type='REG'):
     """Imports seasonal player data
@@ -393,8 +398,8 @@ def get_weekly_receiving_df(player_list, timeframe_dict):
     if len(rec_df) > 0:
         for key in timeframe_dict:
             sub_df = pandas.concat([sub_df, rec_df.loc[(rec_df['season']==key) & (rec_df['week'].isin(timeframe_dict[key]))]], ignore_index=True)
-    sub_df['adot'] = sub_df['receiving_air_yards'] / sub_df['targets']
     
+    sub_df['adot'] = (sub_df['receiving_air_yards'] / sub_df['targets'].replace(0, np.nan))
     return sub_df
 
 
@@ -992,6 +997,7 @@ def generate_df(players, data_def, granularity, timeframe):
     rushing = False
     receiving = False
     misc = False
+    df_list = []
     if "Passing" in data_def:
         passing = True
         if weekly and data_format == "Week":
@@ -1002,6 +1008,7 @@ def generate_df(players, data_def, granularity, timeframe):
             df1 = get_cumulative_weekly_passing_df(player_names, timeframe)
         elif seasonal and data_format == 'Cumulative':
             df1 = get_cumulative_seasonal_passing_df(player_names, timeframe)
+        df_list.append(df1)
     if "Rushing" in data_def:
         rushing = True
         if weekly and data_format == "Week":
@@ -1012,7 +1019,7 @@ def generate_df(players, data_def, granularity, timeframe):
             df2 = get_cumulative_weekly_rushing_df(player_names, timeframe)
         elif seasonal and data_format == 'Cumulative':
             df2 = get_cumulative_seasonal_rushing_df(player_names, timeframe)
-
+        df_list.append(df2)
     if "Receiving" in data_def:
         receiving = True
         if weekly and data_format == "Week":
@@ -1023,30 +1030,110 @@ def generate_df(players, data_def, granularity, timeframe):
             df3 = get_cumulative_weekly_receiving_df(player_names, timeframe)
         elif seasonal and data_format == 'Cumulative':
             df3 = get_cumulative_seasonal_receiving_df(player_names, timeframe)
-
+        df_list.append(df3)
     if "Misc." in data_def:
         if weekly and data_format == "Week":
             if rushing or receiving:
                 misc = True
                 df_qbr = get_nonqb_qbr_weekly(player_names, timeframe)
+                df_list.append(df_qbr)
             if passing:
                 misc = True
                 df_qb_qbr = get_qb_qbr_weekly(player_names, timeframe)
+                df_list.append(df_qb_qbr)
         elif seasonal and data_format == "Season":
             if rushing or receiving:
                 misc = True
                 df_comp = get_comp(player_names, timeframe)
-                
+                df_list.append(df_comp)
         elif weekly and data_format == 'Cumulative':
             pass
         elif seasonal and data_format == 'Cumulative':
             pass
     
+    merged_df = df_list[0]
+    
     if data_format == "Week":           # Outter Joins to 1 DF
-        pass
+        root_cols = ['player_name', 'season', 'week']
+        overlap_cols = ['position', 'recent_team', 'season_type', 'opponent_team', 'fantasy_points', 'fantasy_points_ppr']
+        for i in range(1, len(df_list)):
+            merged_df = pandas.merge(merged_df, df_list[i], on=root_cols, how='outer')
+        for col in merged_df.columns:
+            overlaps = {}
+            if col in overlap_cols:
+                z = merged_df[col].count()
+                overlaps[col] = z
+                if col+str("_x") in merged_df.columns:
+                    x = merged_df[col+str("_x")].count()
+                    overlaps[col+str("_x")] = x
+                if col+str("_y") in merged_df.columns:
+                    y = merged_df[col+str("_y")].count()
+                    overlaps[col+str("_y")] = y
+                if z == len(merged_df):
+                    core_col = col
+                else:
+                    core_col = max(overlaps, key=overlaps.get)
+                if len(overlaps) > 1:
+                    overlaps.pop(core_col)
+                    merged_df = merged_df.drop(columns=list(overlaps.keys()))                        
+        all_cols = merged_df.columns.tolist()
+        left_cols = root_cols + overlap_cols
+        right_cols = remove_strings(all_cols, left_cols)
+        merged_df = merged_df[left_cols + right_cols]
+        merged_df = merged_df.replace(0, np.nan)
+        merged_df = merged_df.sort_values(by=root_cols)
+        meta_cols = overlap_cols
+        return merged_df
     if data_format == "Season":
-        pass
+        merged_df['player_name'] = merged_df['player_name'].str.replace("Jr.", "")
+        merged_df['player_name'] = merged_df['player_name'].str.replace("'", "")
+        merged_df['player_name'] = merged_df['player_name'].str.replace(".", "")
+        merged_df['player_name'] = merged_df['player_name'].str.lower()
+        root_cols = ['player_name', 'season']
+        overlap_cols = ['team', 'games', 'season_type', 'fantasy_points', 'fantasy_points_ppr', 'player_id', 'age_x', 'brk_tkl_x']
+        for i in range(1, len(df_list)):
+            df_list[i]['player_name'] = df_list[i]['player_name'].str.replace("Jr.", "")
+            df_list[i]['player_name'] = df_list[i]['player_name'].str.replace("'", "")
+            df_list[i]['player_name'] = df_list[i]['player_name'].str.replace(".", "")
+            df_list[i]['player_name'] = df_list[i]['player_name'].str.lower()
+            merged_df = pandas.merge(merged_df, df_list[i], on=root_cols, how='outer')
+        for col in merged_df.columns:
+            overlaps = {}
+            if col in overlap_cols:
+                z = merged_df[col].count()
+                overlaps[col] = z
+                if col+str("_x") in merged_df.columns:
+                    x = merged_df[col+str("_x")].count()
+                    overlaps[col+str("_x")] = x
+                if col+str("_y") in merged_df.columns:
+                    y = merged_df[col+str("_y")].count()
+                    overlaps[col+str("_y")] = y
+                if col.replace("_x", "_y") in merged_df.columns:
+                    xy = merged_df[col.replace("_x", "_y")].count()
+                    overlaps[col.replace("_x", "_y")] = xy
+                if z == len(merged_df):
+                    core_col = col
+                else:
+                    core_col = max(overlaps, key=overlaps.get)
+                if len(overlaps) > 1:
+                    overlaps.pop(core_col)
+                    merged_df = merged_df.drop(columns=list(overlaps.keys()))                        
+        all_cols = merged_df.columns.tolist()
+        left_cols = root_cols + overlap_cols
+        right_cols = remove_strings(all_cols, left_cols)
+        merged_df = merged_df[left_cols + right_cols]
+        merged_df = merged_df.replace(0, np.nan)
+        merged_df = merged_df.sort_values(by=root_cols)
+        merged_df.rename(columns={'age_x' : 'age', 'brk_tkl_x' : 'brk_tkl'}, inplace=True)
+        merged_df = merged_df.drop(columns=['player_id', 'season_type'])
+        return merged_df
     if data_format == "Cumulative":
-        pass
-    return df1
+        root_cols = ['player_name']
+        for i in range(1, len(df_list)):
+            merged_df = pandas.merge(merged_df, df_list[i], on=root_cols, how='outer')
+        
+        merged_df = merged_df.replace(0, np.nan)
+        merged_df = merged_df.sort_values(by=root_cols)
+        return merged_df
+    
 
