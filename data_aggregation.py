@@ -4,7 +4,6 @@ Created on Thu Jan 16 08:52:36 2025
 
 @author: nick_
 """
-import nfl_data_py as nfl
 
 import os
 import logging
@@ -902,6 +901,80 @@ def get_cumulative_seasonal_receiving_df(player_list, timeframe_list):
             sum_df = pandas.concat([sum_df, new_row], ignore_index=True)
     return sum_df
 
+def get_comp(player_list, timeframe_list):
+    comp_file = r"Top_Competition_CORE.xlsx"
+    comp_df = pandas.read_excel(comp_file)
+    player_list_T = [transform_name(x) for x in player_list]
+    seasons = timeframe_list
+    df = comp_df.loc[(comp_df['alt_name'].isin(player_list_T)) & (comp_df['season'].isin(seasons))]
+    if len(df) > 0:
+        df_final = df[['player_name', 'season', 'top_competitor_name']]
+        df_final.reset_index(drop=True, inplace=True)
+    else:
+        df_final = pandas.DataFrame(columns=['player_name', 'season', 'top_competitor_name'])
+    return df_final
+
+def get_nonqb_qbr_weekly(player_list, timeframe_dict):
+    with open("team_qb_pass_rating_dict.pkl", "rb") as f:
+        team_qbr_dic = pickle.load(f)
+    seasons = list(timeframe_dict.keys())
+    
+    misc_cols_wk = ['player_display_name', 'position', 'recent_team', 'season', 'week']
+    player_loc = player_list
+    
+    misc_df_basic = import_weekly_data(years=seasons,columns=misc_cols_wk)
+    misc_df_basic.rename(columns={'player_display_name' : 'player_name'}, inplace=True)
+    misc_df_basic = misc_df_basic.loc[(misc_df_basic['player_name'].isin(player_loc)) & (misc_df_basic['position'] != 'QB')]
+    
+    misc_df = pandas.DataFrame(columns=['player_name', 'season', 'week', 'team_qbr'])
+
+    if len(misc_df_basic) > 0:
+        for key in timeframe_dict:
+            sub_df = misc_df_basic.loc[(misc_df_basic['season']==key) & (misc_df_basic['week'].isin(timeframe_dict[key]))]
+            qbr = []
+            if len(sub_df) > 0:
+                for index, row in sub_df.iterrows():
+                    key = (row['season'], row['recent_team'], row['week'])
+                    if key in team_qbr_dic:
+                        qbr.append(team_qbr_dic[key])
+                    else:
+                        qbr.append(None)
+                sub_df['team_qbr'] = qbr
+                sub_df = sub_df[['player_name', 'season', 'week', 'team_qbr']]
+                misc_df = pandas.concat([misc_df, sub_df], ignore_index=True)
+    return misc_df
+
+def get_qb_qbr_weekly(player_list, timeframe_dict):
+    with open("qb_pass_rating_dict.pkl", "rb") as f:
+        player_qbr_dic = pickle.load(f)
+    seasons = list(timeframe_dict.keys())
+    
+    misc_cols_wk = ['player_display_name', 'position', 'recent_team', 'season', 'week']
+    player_loc = player_list
+    
+    misc_df_basic = import_weekly_data(years=seasons,columns=misc_cols_wk)
+    misc_df_basic.rename(columns={'player_display_name' : 'player_name'}, inplace=True)
+    misc_df_basic = misc_df_basic.loc[(misc_df_basic['player_name'].isin(player_loc)) & (misc_df_basic['position'] == 'QB')]
+    
+    misc_df = pandas.DataFrame(columns=['player_name', 'season', 'week', 'player_qbr'])
+
+    if len(misc_df_basic) > 0:
+        for key in timeframe_dict:
+            sub_df = misc_df_basic.loc[(misc_df_basic['season']==key) & (misc_df_basic['week'].isin(timeframe_dict[key]))]
+            qbr = []
+            if len(sub_df) > 0:
+                for index, row in sub_df.iterrows():
+                    key = (row['season'], row['recent_team'], row['week'], row['player_name'])
+                    if key in player_qbr_dic:
+                        qbr.append(player_qbr_dic[key])
+                    else:
+                        qbr.append(None)
+                sub_df['player_qbr'] = qbr
+                sub_df = sub_df[['player_name', 'season', 'week', 'player_qbr']]
+                misc_df = pandas.concat([misc_df, sub_df], ignore_index=True)
+    return misc_df
+
+
 # Full function call
 def generate_df(players, data_def, granularity, timeframe):
     # players = list of player names
@@ -914,7 +987,6 @@ def generate_df(players, data_def, granularity, timeframe):
     elif type(timeframe) == dict:
         weekly = True
     player_names = players
-    data_requested = data_def
     data_format = granularity
     passing = False
     rushing = False
@@ -953,14 +1025,28 @@ def generate_df(players, data_def, granularity, timeframe):
             df3 = get_cumulative_seasonal_receiving_df(player_names, timeframe)
 
     if "Misc." in data_def:
-        misc = True
         if weekly and data_format == "Week":
-            pass
+            if rushing or receiving:
+                misc = True
+                df_qbr = get_nonqb_qbr_weekly(player_names, timeframe)
+            if passing:
+                misc = True
+                df_qb_qbr = get_qb_qbr_weekly(player_names, timeframe)
         elif seasonal and data_format == "Season":
-            pass
+            if rushing or receiving:
+                misc = True
+                df_comp = get_comp(player_names, timeframe)
+                
         elif weekly and data_format == 'Cumulative':
             pass
         elif seasonal and data_format == 'Cumulative':
             pass
-
+    
+    if data_format == "Week":           # Outter Joins to 1 DF
+        pass
+    if data_format == "Season":
+        pass
+    if data_format == "Cumulative":
+        pass
     return df1
+
