@@ -96,6 +96,13 @@ def transform_name(name):
     name_T = name_T.lower()
     return name_T
 
+def transform_col(df, col, new_col):
+    df[new_col] = df[col].str.replace("Jr.", "")
+    df[new_col] = df[new_col].str.replace("'", "")
+    df[new_col] = df[new_col].str.replace(".", "")
+    df[new_col] = df[new_col].str.lower()
+    return df
+
 def get_seasons(dist=bool, start_end=bool, start_szn=str, end_szn=str, selections=list):
     if dist:
         szns = [int(s[:4]) for s in selections]
@@ -341,6 +348,7 @@ def get_weekly_passing_df(player_list, timeframe_dict):
 def get_weekly_rushing_df(player_list, timeframe_dict):
     
     seasons = list(timeframe_dict.keys())
+    alt_names = [transform_name(x) for x in player_list]
     
     name_col_basic_pfr = ('player_display_name','pfr_player_name')
     
@@ -353,16 +361,28 @@ def get_weekly_rushing_df(player_list, timeframe_dict):
     
     rushing_df_adv = rushing_df_adv[adv_rushing_cols_wk]
     rushing_df_adv = rushing_df_adv.reset_index(drop=True)
-    player_loc = list(set(rushing_df_adv['player_name'].tolist()))
+    rushing_df_adv = transform_col(rushing_df_adv,'player_name', 'player_name_alt')
+    player_loc = list(set(rushing_df_adv['player_name_alt'].tolist()))
     
     rushing_df_basic = import_weekly_data(years=seasons,columns=rushing_cols_wk)
-    rushing_df_basic = rushing_df_basic.loc[rushing_df_basic['player_display_name'].isin(player_loc)]
+    rushing_df_basic = transform_col(rushing_df_basic,'player_display_name', 'player_name_alt')
+    rushing_df_basic = rushing_df_basic.loc[rushing_df_basic['player_name_alt'].isin(player_loc)]
+
     rushing_df_basic.rename(columns={name_col_basic_pfr[0]: 'player_name'}, inplace=True)
     rushing_df_basic = rushing_df_basic.reset_index(drop=True)
     
-    rushing_df = pandas.merge(rushing_df_basic, rushing_df_adv, on=['player_name', 'season', 'week'], how='left')
-    rushing_df = rushing_df.loc[rushing_df['player_name'].isin(player_list)]
-    
+    rushing_df = pandas.merge(rushing_df_basic, rushing_df_adv, on=['player_name_alt', 'season', 'week'], how='left')
+    rushing_df = rushing_df.loc[rushing_df['player_name_alt'].isin(alt_names)]
+    rushing_df.rename(columns={'player_name_y': 'player_name'}, inplace=True)
+    rushing_df.drop(columns=['player_name_x'], inplace=True)
+    rushing_df = rushing_df[['player_name', 'position', 'recent_team', 'season', 'week',
+       'season_type', 'opponent_team', 'fantasy_points', 'fantasy_points_ppr',
+       'carries', 'rushing_yards', 'rushing_tds', 'rushing_fumbles',
+       'rushing_fumbles_lost', 'rushing_first_downs', 'rushing_epa',
+       'rushing_2pt_conversions', 'rushing_yards_before_contact', 'rushing_yards_before_contact_avg',
+       'rushing_yards_after_contact', 'rushing_yards_after_contact_avg',
+       'rushing_broken_tackles']]
+
     sub_df = pandas.DataFrame(columns=rushing_df.columns.tolist())
     if len(rushing_df) > 0:
         for key in timeframe_dict:
@@ -372,7 +392,7 @@ def get_weekly_rushing_df(player_list, timeframe_dict):
 
 def get_weekly_receiving_df(player_list, timeframe_dict):
     seasons = list(timeframe_dict.keys())
-    
+    alt_names = [transform_name(x) for x in player_list]
     name_col_basic_pfr = ('player_display_name','pfr_player_name')
     
     rec_cols_wk = ['player_display_name', 'position', 'recent_team', 'season', 'week', 'season_type', 'opponent_team', 'fantasy_points', 'fantasy_points_ppr', 'receptions', 'targets', 'receiving_yards', 'receiving_tds', 'receiving_fumbles', 'receiving_fumbles_lost', 'receiving_air_yards', 'receiving_yards_after_catch', 'receiving_first_downs', 'receiving_epa', 'receiving_2pt_conversions', 'racr', 'target_share', 'air_yards_share', 'wopr']
@@ -384,16 +404,30 @@ def get_weekly_receiving_df(player_list, timeframe_dict):
     
     rec_df_adv = rec_df_adv[adv_rec_cols_wk]
     rec_df_adv = rec_df_adv.reset_index(drop=True)
-    player_loc = list(set(rec_df_adv['player_name'].tolist()))
+    rec_df_adv = transform_col(rec_df_adv,'player_name', 'player_name_alt')
+    player_loc = list(set(rec_df_adv['player_name_alt'].tolist()))
     
     rec_df_basic = import_weekly_data(years=seasons,columns=rec_cols_wk)
-    rec_df_basic = rec_df_basic.loc[rec_df_basic['player_display_name'].isin(player_loc)]
+    rec_df_basic = transform_col(rec_df_basic,'player_display_name', 'player_name_alt')
+    rec_df_basic = rec_df_basic.loc[rec_df_basic['player_name_alt'].isin(player_loc)]
     rec_df_basic.rename(columns={name_col_basic_pfr[0]: 'player_name'}, inplace=True)
     rec_df_basic = rec_df_basic.reset_index(drop=True)
     
-    rec_df = pandas.merge(rec_df_basic, rec_df_adv, on=['player_name', 'season', 'week'], how='left')
-    rec_df = rec_df.loc[rec_df['player_name'].isin(player_list)]
+    rec_df = pandas.merge(rec_df_basic, rec_df_adv, on=['player_name_alt', 'season', 'week'], how='left')
+    rec_df = rec_df.loc[rec_df['player_name_alt'].isin(alt_names)]
     
+    rec_df.rename(columns={'player_name_y': 'player_name'}, inplace=True)
+    rec_df.drop(columns=['player_name_x'], inplace=True)
+
+    rec_df = rec_df[['player_name', 'position', 'recent_team', 'season', 'week', 'season_type',
+       'opponent_team', 'fantasy_points', 'fantasy_points_ppr', 'receptions',
+       'targets', 'receiving_yards', 'receiving_tds', 'receiving_fumbles',
+       'receiving_fumbles_lost', 'receiving_air_yards',
+       'receiving_yards_after_catch', 'receiving_first_downs', 'receiving_epa',
+       'receiving_2pt_conversions', 'racr', 'target_share', 'air_yards_share',
+       'wopr', 'receiving_broken_tackles',
+       'receiving_drop', 'receiving_drop_pct', 'receiving_int',
+       'receiving_rat']]
     sub_df = pandas.DataFrame(columns=rec_df.columns.tolist())
     if len(rec_df) > 0:
         for key in timeframe_dict:
@@ -925,12 +959,17 @@ def get_nonqb_qbr_weekly(player_list, timeframe_dict):
     seasons = list(timeframe_dict.keys())
     
     misc_cols_wk = ['player_display_name', 'position', 'recent_team', 'season', 'week']
-    player_loc = player_list
-    
+    player_loc = [transform_name(x) for x in player_list]
+    player_name_dict = dict(zip(player_loc, player_list))
     misc_df_basic = import_weekly_data(years=seasons,columns=misc_cols_wk)
-    misc_df_basic.rename(columns={'player_display_name' : 'player_name'}, inplace=True)
-    misc_df_basic = misc_df_basic.loc[(misc_df_basic['player_name'].isin(player_loc)) & (misc_df_basic['position'] != 'QB')]
-    
+    misc_df_basic = transform_col(misc_df_basic,'player_display_name', 'player_name_alt')
+    #misc_df_basic.rename(columns={'player_display_name' : 'player_name'}, inplace=True)
+    misc_df_basic = misc_df_basic.loc[(misc_df_basic['player_name_alt'].isin(player_loc)) & (misc_df_basic['position'] != 'QB')]
+    player_name_list = []
+    for index, row in misc_df_basic.iterrows():
+        player_name_list.append(player_name_dict[row['player_name_alt']])
+        
+    misc_df_basic['player_name'] = player_name_list
     misc_df = pandas.DataFrame(columns=['player_name', 'season', 'week', 'team_qbr'])
 
     if len(misc_df_basic) > 0:
@@ -1020,6 +1059,7 @@ def generate_df(players, data_def, granularity, timeframe):
         elif seasonal and data_format == 'Cumulative':
             df2 = get_cumulative_seasonal_rushing_df(player_names, timeframe)
         df_list.append(df2)
+        
     if "Receiving" in data_def:
         receiving = True
         if weekly and data_format == "Week":
@@ -1052,7 +1092,6 @@ def generate_df(players, data_def, granularity, timeframe):
             pass
     
     merged_df = df_list[0]
-    
     if data_format == "Week":           # Outter Joins to 1 DF
         root_cols = ['player_name', 'season', 'week']
         overlap_cols = ['position', 'recent_team', 'season_type', 'opponent_team', 'fantasy_points', 'fantasy_points_ppr']
@@ -1075,6 +1114,8 @@ def generate_df(players, data_def, granularity, timeframe):
                     core_col = max(overlaps, key=overlaps.get)
                 if len(overlaps) > 1:
                     overlaps.pop(core_col)
+                    for key in overlaps:
+                        merged_df[core_col] = merged_df[core_col].fillna(merged_df[key])
                     merged_df = merged_df.drop(columns=list(overlaps.keys()))                        
         all_cols = merged_df.columns.tolist()
         left_cols = root_cols + overlap_cols
@@ -1136,4 +1177,3 @@ def generate_df(players, data_def, granularity, timeframe):
         merged_df = merged_df.sort_values(by=root_cols)
         return merged_df
     
-
