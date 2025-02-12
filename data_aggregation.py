@@ -69,8 +69,8 @@ def get_weeks(dist=bool, start_end=bool,start_wk=str, end_wk=str, selections=lis
         end_szn_wk = (end_wk[:4], end_wk[18:])
         if start_szn_wk[0] == end_szn_wk[0]:
             szn = int(start_szn_wk[0])
-            wk = list(range(int(start_szn_wk[1]), int(end_szn_wk[1] + 1)))
-            szn_wk[szn] = [wk]
+            wk = list(range(int(start_szn_wk[1]), int(end_szn_wk[1]) + 1))
+            szn_wk[szn] = wk
         else:
             szn = list(range(int(start_szn_wk[0]),int(end_szn_wk[0]) + 1))
             szn_wk = dict.fromkeys(szn)
@@ -313,6 +313,8 @@ def import_weekly_pfr(s_type, years=None):
 def get_weekly_passing_df(player_list, timeframe_dict):
     
     seasons = list(timeframe_dict.keys())
+    alt_names = [transform_name(x) for x in player_list]
+    player_name_dict = dict(zip(alt_names, player_list))
     
     name_col_basic_pfr = ('player_display_name','pfr_player_name')
     
@@ -324,31 +326,45 @@ def get_weekly_passing_df(player_list, timeframe_dict):
     passing_df_adv.rename(columns={name_col_basic_pfr[1]: 'player_name'}, inplace=True)
     
     passing_df_adv = passing_df_adv[adv_passing_cols_wk]
-    
     passing_df_adv = passing_df_adv.reset_index(drop=True)
-    player_loc = list(set(passing_df_adv['player_name'].tolist()))
+    passing_df_adv = transform_col(passing_df_adv,'player_name', 'player_name_alt')
+    player_loc = list(set(passing_df_adv['player_name_alt'].tolist()))
     
     passing_df_basic = import_weekly_data(years=seasons,columns=passing_cols_wk)
-    
-    passing_df_basic = passing_df_basic.loc[passing_df_basic['player_display_name'].isin(player_loc)]
+    passing_df_basic = transform_col(passing_df_basic,'player_display_name', 'player_name_alt')
+    passing_df_basic = passing_df_basic.loc[passing_df_basic['player_name_alt'].isin(player_loc)]
     
     passing_df_basic.rename(columns={name_col_basic_pfr[0]: 'player_name'}, inplace=True)
     passing_df_basic = passing_df_basic.reset_index(drop=True)
     
-    passing_df = pandas.merge(passing_df_basic, passing_df_adv, on=['player_name', 'season', 'week'], how='left')
-    passing_df = passing_df.loc[passing_df['player_name'].isin(player_list)]
+    passing_df = pandas.merge(passing_df_basic, passing_df_adv, on=['player_name_alt', 'season', 'week'], how='left')
+    passing_df = passing_df.loc[passing_df['player_name_alt'].isin(alt_names)]
+    player_name_list = []
+    for index, row in passing_df.iterrows():
+        player_name_list.append(player_name_dict[row['player_name_alt']])
+    passing_df['player_name'] = player_name_list
+    #passing_df.rename(columns={'player_name_x': 'player_name'}, inplace=True)
+    #passing_df.drop(columns=['player_name_y', 'player_name_alt'], inplace=True)
+    passing_df = passing_df[['player_name', 'position', 'recent_team', 'season', 'week', 
+                             'season_type', 'opponent_team', 'fantasy_points', 'fantasy_points_ppr', 
+                             'completions', 'attempts', 'passing_yards', 'passing_tds', 'interceptions', 
+                             'sacks', 'sack_yards', 'sack_fumbles', 'sack_fumbles_lost', 'passing_air_yards', 
+                             'passing_yards_after_catch', 'passing_first_downs', 'passing_epa', 
+                             'passing_2pt_conversions', 'pacr', 'dakota', 'passing_drops', 'passing_drop_pct', 
+                             'passing_bad_throws', 'passing_bad_throw_pct', 'times_sacked', 'times_blitzed', 
+                             'times_hurried', 'times_hit', 'times_pressured', 'times_pressured_pct']]
     
     sub_df = pandas.DataFrame(columns=passing_df.columns.tolist())
     if len(passing_df) > 0:
         for key in timeframe_dict:
             sub_df = pandas.concat([sub_df, passing_df.loc[(passing_df['season']==key) & (passing_df['week'].isin(timeframe_dict[key]))]], ignore_index=True)
-    
     return sub_df
 
 def get_weekly_rushing_df(player_list, timeframe_dict):
     
     seasons = list(timeframe_dict.keys())
     alt_names = [transform_name(x) for x in player_list]
+    player_name_dict = dict(zip(alt_names, player_list))
     
     name_col_basic_pfr = ('player_display_name','pfr_player_name')
     
@@ -373,8 +389,12 @@ def get_weekly_rushing_df(player_list, timeframe_dict):
     
     rushing_df = pandas.merge(rushing_df_basic, rushing_df_adv, on=['player_name_alt', 'season', 'week'], how='left')
     rushing_df = rushing_df.loc[rushing_df['player_name_alt'].isin(alt_names)]
-    rushing_df.rename(columns={'player_name_y': 'player_name'}, inplace=True)
-    rushing_df.drop(columns=['player_name_x'], inplace=True)
+    player_name_list = []
+    for index, row in rushing_df.iterrows():
+        player_name_list.append(player_name_dict[row['player_name_alt']])
+    rushing_df['player_name'] = player_name_list
+    #rushing_df.rename(columns={'player_name_y': 'player_name'}, inplace=True)
+    #rushing_df.drop(columns=['player_name_x'], inplace=True)
     rushing_df = rushing_df[['player_name', 'position', 'recent_team', 'season', 'week',
        'season_type', 'opponent_team', 'fantasy_points', 'fantasy_points_ppr',
        'carries', 'rushing_yards', 'rushing_tds', 'rushing_fumbles',
@@ -387,12 +407,13 @@ def get_weekly_rushing_df(player_list, timeframe_dict):
     if len(rushing_df) > 0:
         for key in timeframe_dict:
             sub_df = pandas.concat([sub_df, rushing_df.loc[(rushing_df['season']==key) & (rushing_df['week'].isin(timeframe_dict[key]))]], ignore_index=True)
-    
     return sub_df
 
 def get_weekly_receiving_df(player_list, timeframe_dict):
     seasons = list(timeframe_dict.keys())
     alt_names = [transform_name(x) for x in player_list]
+    player_name_dict = dict(zip(alt_names, player_list))
+    
     name_col_basic_pfr = ('player_display_name','pfr_player_name')
     
     rec_cols_wk = ['player_display_name', 'position', 'recent_team', 'season', 'week', 'season_type', 'opponent_team', 'fantasy_points', 'fantasy_points_ppr', 'receptions', 'targets', 'receiving_yards', 'receiving_tds', 'receiving_fumbles', 'receiving_fumbles_lost', 'receiving_air_yards', 'receiving_yards_after_catch', 'receiving_first_downs', 'receiving_epa', 'receiving_2pt_conversions', 'racr', 'target_share', 'air_yards_share', 'wopr']
@@ -415,10 +436,14 @@ def get_weekly_receiving_df(player_list, timeframe_dict):
     
     rec_df = pandas.merge(rec_df_basic, rec_df_adv, on=['player_name_alt', 'season', 'week'], how='left')
     rec_df = rec_df.loc[rec_df['player_name_alt'].isin(alt_names)]
-    
-    rec_df.rename(columns={'player_name_y': 'player_name'}, inplace=True)
-    rec_df.drop(columns=['player_name_x'], inplace=True)
 
+    player_name_list = []
+    for index, row in rec_df.iterrows():
+        player_name_list.append(player_name_dict[row['player_name_alt']])
+    rec_df['player_name'] = player_name_list
+    #rec_df.rename(columns={'player_name_x': 'player_name'}, inplace=True)
+    #rec_df.drop(columns=['player_name_y'], inplace=True)
+    
     rec_df = rec_df[['player_name', 'position', 'recent_team', 'season', 'week', 'season_type',
        'opponent_team', 'fantasy_points', 'fantasy_points_ppr', 'receptions',
        'targets', 'receiving_yards', 'receiving_tds', 'receiving_fumbles',
@@ -434,6 +459,7 @@ def get_weekly_receiving_df(player_list, timeframe_dict):
             sub_df = pandas.concat([sub_df, rec_df.loc[(rec_df['season']==key) & (rec_df['week'].isin(timeframe_dict[key]))]], ignore_index=True)
     
     sub_df['adot'] = (sub_df['receiving_air_yards'] / sub_df['targets'].replace(0, np.nan))
+    
     return sub_df
 
 
@@ -1094,37 +1120,83 @@ def generate_df(players, data_def, granularity, timeframe):
     merged_df = df_list[0]
     if data_format == "Week":           # Outter Joins to 1 DF
         root_cols = ['player_name', 'season', 'week']
-        overlap_cols = ['position', 'recent_team', 'season_type', 'opponent_team', 'fantasy_points', 'fantasy_points_ppr']
-        for i in range(1, len(df_list)):
-            merged_df = pandas.merge(merged_df, df_list[i], on=root_cols, how='outer')
-        for col in merged_df.columns:
-            overlaps = {}
-            if col in overlap_cols:
-                z = merged_df[col].count()
-                overlaps[col] = z
-                if col+str("_x") in merged_df.columns:
-                    x = merged_df[col+str("_x")].count()
-                    overlaps[col+str("_x")] = x
-                if col+str("_y") in merged_df.columns:
-                    y = merged_df[col+str("_y")].count()
-                    overlaps[col+str("_y")] = y
-                if z == len(merged_df):
-                    core_col = col
-                else:
-                    core_col = max(overlaps, key=overlaps.get)
-                if len(overlaps) > 1:
-                    overlaps.pop(core_col)
-                    for key in overlaps:
-                        merged_df[core_col] = merged_df[core_col].fillna(merged_df[key])
-                    merged_df = merged_df.drop(columns=list(overlaps.keys()))                        
-        all_cols = merged_df.columns.tolist()
-        left_cols = root_cols + overlap_cols
-        right_cols = remove_strings(all_cols, left_cols)
-        merged_df = merged_df[left_cols + right_cols]
-        merged_df = merged_df.replace(0, np.nan)
-        merged_df = merged_df.sort_values(by=root_cols)
-        meta_cols = overlap_cols
-        return merged_df
+        if len(df_list) > 1:
+            overlap_cols = ['position', 'recent_team', 'season_type', 'opponent_team', 'fantasy_points', 'fantasy_points_ppr']
+            for i in range(1, len(df_list)):
+                merged_df = pandas.merge(merged_df, df_list[i], on=root_cols, how='outer')
+            for col in merged_df.columns:
+                overlaps = {}
+                if col in overlap_cols:
+                    z = merged_df[col].count()
+                    overlaps[col] = z
+                    print(z, col)
+                    if col+str("_x") in merged_df.columns:
+                        x = merged_df[col+str("_x")].count()
+                        overlaps[col+str("_x")] = x
+                    if col+str("_y") in merged_df.columns:
+                        y = merged_df[col+str("_y")].count()
+                        overlaps[col+str("_y")] = y
+                    if z == len(merged_df):
+                        core_col = col
+                    else:
+                        core_col = max(overlaps, key=overlaps.get)
+                    if len(overlaps) > 1:
+                        overlaps.pop(core_col)
+                        for key in overlaps:
+                            merged_df[core_col] = merged_df[core_col].fillna(merged_df[key])
+                        merged_df = merged_df.drop(columns=list(overlaps.keys()))
+                        if "_x" in core_col or "_y" in core_col:
+                            new_col_name = core_col.replace("_x", "")
+                            new_col_name = core_col.replace("_y", "")
+                            merged_df.rename(columns={core_col : new_col_name}, inplace=True)
+                elif col.replace("_x", "") in overlap_cols and col.replace("_x", "") not in merged_df.columns:
+                    x = merged_df[col].count()
+                    overlaps[col] = x
+                    print(x, col)
+                    if col.replace("_x", "_y") in merged_df.columns:
+                        y = merged_df[col.replace("_x", "_y")].count()
+                        overlaps[col.replace("_x", "_y")] = y
+                    if x == len(merged_df):
+                        core_col = col
+                    else:
+                        core_col = max(overlaps, key=overlaps.get)
+                    if len(overlaps) > 1:
+                        overlaps.pop(core_col)
+                        for key in overlaps:
+                            merged_df[core_col] = merged_df[core_col].fillna(merged_df[key])
+                        merged_df = merged_df.drop(columns=list(overlaps.keys()))
+                        new_col_name = core_col.replace("_x", "")
+                        new_col_name = core_col.replace("_y", "")
+                        merged_df.rename(columns={core_col : new_col_name}, inplace=True)
+                elif col.replace("_y", "") in overlap_cols and col.replace("_y", "") not in merged_df.columns:
+                    x = merged_df[col].count()
+                    overlaps[col] = x
+                    print(x, col)
+                    if col.replace("_y", "_x") in merged_df.columns:
+                        y = merged_df[col.replace("_y", "_x")].count()
+                        overlaps[col.replace("_y", "_x")] = y
+                    if x == len(merged_df):
+                        core_col = col
+                    else:
+                        core_col = max(overlaps, key=overlaps.get)
+                    if len(overlaps) > 1:
+                        overlaps.pop(core_col)
+                        for key in overlaps:
+                            merged_df[core_col] = merged_df[core_col].fillna(merged_df[key])
+                        merged_df = merged_df.drop(columns=list(overlaps.keys()))
+                        new_col_name = core_col.replace("_x", "")
+                        new_col_name = core_col.replace("_y", "")
+                        merged_df.rename(columns={core_col : new_col_name}, inplace=True)
+            all_cols = merged_df.columns.tolist()
+            left_cols = root_cols + overlap_cols
+            right_cols = remove_strings(all_cols, left_cols)
+            merged_df = merged_df[left_cols + right_cols]
+            merged_df = merged_df.replace(0, np.nan)
+            merged_df = merged_df.sort_values(by=root_cols)
+            meta_cols = overlap_cols
+            return merged_df
+        else:
+            return merged_df
     if data_format == "Season":
         merged_df['player_name'] = merged_df['player_name'].str.replace("Jr.", "")
         merged_df['player_name'] = merged_df['player_name'].str.replace("'", "")
